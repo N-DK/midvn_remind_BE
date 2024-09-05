@@ -13,7 +13,7 @@ class VehicleNoGPS extends DatabaseModel {
         const result = await this.select(
             con,
             tables.tableVehicleNoGPS,
-            'license_plate, user_id, license',
+            'id, license_plate, user_id, license',
             'user_id = ? AND is_deleted = 0',
             [userID],
         );

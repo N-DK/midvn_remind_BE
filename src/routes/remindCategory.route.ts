@@ -9,7 +9,9 @@ router.get('/get-all', remindCategoryController.getAllRows);
 
 router.get('/get-all/:id',verifyToken ,remindCategoryController.getByUserId);
 
-router.post('/add')
+router.post('/add', 
+    
+)
 
 export default (app: Express) => {
     app.use('/api/v1/remind/category', router);
