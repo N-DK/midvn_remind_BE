@@ -2,12 +2,13 @@ import { PoolConnection } from 'mysql2';
 import DatabaseModel from './database.model';
 import { tables } from '../constants/tableName.constant';
 
+const INFINITY = 2147483647;
 
 class RemindModel extends DatabaseModel {
     constructor() {
         super();
     }
-    async getAll(con:PoolConnection, userID: number){
+    async getAll(con: PoolConnection, userID: number) {
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
@@ -40,17 +41,66 @@ class RemindModel extends DatabaseModel {
              ${tables.tableRemindCategory}.update_time AS category_update_time,
              ${tables.tableRemindCategory}.is_deleted AS category_is_deleted`,
 
-             `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0`
-             [userID],
-             [
-                {table1: tables.tableRemindVehicle, on: `${tables.tableVehicleNoGPS}.id = ${tables.tableRemindVehicle}.vehicle_id`, type:'INNER'},
-                {table2: tables.tableRemind, on:  `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`, type:'INNER'},
-                {table3: tables.tableRemindCategory, on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`, type:'INNER'},
-             ]
+            `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0`[
+                userID
+            ],
+            [
+                {
+                    table1: tables.tableRemindVehicle,
+                    on: `${tables.tableVehicleNoGPS}.id = ${tables.tableRemindVehicle}.vehicle_id`,
+                    type: 'INNER',
+                },
+                {
+                    table2: tables.tableRemind,
+                    on: `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`,
+                    type: 'INNER',
+                },
+                {
+                    table3: tables.tableRemindCategory,
+                    on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
+                    type: 'INNER',
+                },
+            ],
         );
         return result;
     }
 
+    async addRemind(con: PoolConnection, data: any) {
+        const remind_id = await this.insert(con, tables.tableRemind, {
+            img_url: data?.img_url ?? null,
+            note_repair: data?.note_repair ?? null,
+            history_repair: data?.history_repair ?? null,
+            current_kilometers: data?.current_kilometers ?? 0,
+            cumulative_kilometers: data?.cumulative_kilometers ?? 0,
+            expiration_time: data?.expiration_time ?? 0,
+            is_delete: 0,
+            time_before: data?.time_before ?? INFINITY,
+            is_notified: data?.is_notified ?? 0,
+            is_received: data?.is_received ?? 0,
+            remind_category_id: data.cate_id,
+            create_time: Date.now(),
+        });
+
+        let queryText = `INSERT INTO ${tables.tableRemindVehicle} (remind_id, vehicle_id) VALUES `;
+
+        data?.vehicles?.forEach((item: any) => {
+            queryText += `(${remind_id}, '${item}'),`;
+        });
+
+        queryText = queryText.slice(0, -1);
+
+        const result = await new Promise((resolve, reject) => {
+            con.query(queryText, (err: any, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+
+        return result;
+    }
 }
 
 export default new RemindModel();
