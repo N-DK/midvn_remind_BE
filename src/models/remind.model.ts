@@ -156,6 +156,26 @@ class RemindModel extends DatabaseModel {
 
     return result;
   }
+  async updateNotifiedOff(con: PoolConnection, remindID: number) {
+    const result = await this.update(
+      con,
+      tables.tableRemind,
+      { is_notified: 1 },
+      'id',
+      remindID
+    );
+    return result;
+  }
+  async updateNotifiedON(con: PoolConnection, remindID: number) {
+    const result = await this.update(
+      con,
+      tables.tableRemind,
+      { is_notified: 0 },
+      'id',
+      remindID
+    );
+    return result;
+  }
 }
 
 export default new RemindModel();

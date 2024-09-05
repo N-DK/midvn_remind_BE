@@ -28,6 +28,17 @@ router.get(
 
 router.post("/add-remind", verifyToken, [], remindController.addRemind);
 
+router.patch('/update-notified-off/:id',
+    verifyToken,
+    [param("id", constants.VALIDATE_DATA).isNumeric()],
+    remindController.updateNotifiedOff
+)
+
+router.patch('/update-notified-on/:id',
+    verifyToken,
+    [param("id", constants.VALIDATE_DATA).isNumeric()],
+    remindController.updateNotifiedOn
+)
 export default (app: Express) => {
   app.use("/api/v1/remind/main", router);
 };

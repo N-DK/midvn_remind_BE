@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import catchAsync from "../helper/catchAsync.helper";
 import remindService from "../services/remind.service";
-import { CREATED, GET } from "../core/success.response";
+import { CREATED, GET ,UPDATE} from "../core/success.response";
 
 class RemindController {
   getAll = catchAsync(
@@ -25,6 +25,19 @@ class RemindController {
       CREATED(res, remind);
     }
   );
+
+  updateNotifiedOff = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const result = await remindService.updateNotifiedOff(parseInt(req.params.id));
+      UPDATE(res, result);
+    }
+  )
+  updateNotifiedOn = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const result = await remindService.updateNotifiedOn(parseInt(req.params.id));
+      UPDATE(res, result);
+    }
+  )
 }
 
 export default new RemindController();
