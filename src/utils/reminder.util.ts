@@ -1,7 +1,7 @@
 import { PoolConnection } from 'mysql2';
 import cron from 'node-cron';
 import DatabaseModel from '../models/database.model';
-import { eventFeature } from 'notify-services';
+import { eventFeature, remindFeature } from 'notify-services';
 import { getConnection } from '../dbs/init.mysql';
 import GPSApi from '../api/GPS.api';
 import { tables } from '../constants/tableName.constant';
@@ -19,24 +19,38 @@ const reminder = {
     start: async () => {
         cron.schedule('* * * * *', async () => {
             // Mỗi phút kiểm tra
-            const now = Date.now(); // Lấy thời gian hiện tại
-            const gps = (await GPSApi.getGPSData()).data || 0; // Lấy dữ liệu GPS
-            const whereClause = `is_received = 0 AND is_notified = 0 AND (expiration_time - ? <= time_before ${
-                gps.total_distance ? 'OR cumulative_kilometers >= ?' : ''
-            })`;
-            const reminds: any = dataBaseModel.select(
-                connection,
-                tables.tableRemind,
-                '*',
-                whereClause,
-                [now, gps.total_distance],
-            );
+            try {
+                console.log('Đang kiểm tra nhắc nhở');
 
-            for (const remind of reminds) {
-                // Gửi thông báo
-                console.log(
-                    `Gửi thông báo: ${remind.title} - ${remind.description}`,
+                const now = Date.now(); // Lấy thời gian hiện tại
+                // const gps = (await GPSApi.getGPSData())?.data; // Lấy dữ liệu GPS
+                const gps: any = {};
+                const whereClause = `is_received = 0 AND is_notified = 0 AND (expiration_time - ? <= time_before ${
+                    gps?.total_distance ? 'OR cumulative_kilometers >= ?' : ''
+                })`;
+                // const whereClause = 'is_received = 0 AND is_notified = 0';
+                const reminds: any = await dataBaseModel.select(
+                    connection,
+                    tables.tableRemind,
+                    '*',
+                    whereClause,
+                    gps?.total_distance ? [now, gps?.total_distance] : [now],
                 );
+
+                for (const remind of reminds) {
+                    // Gửi thông báo
+
+                    await remindFeature.sendNotifyRemind(
+                        'http://localhost:3007',
+                        {
+                            name_remind: 'Change oil',
+                            vehicle_name: 'Honda Civic',
+                            user_id: 5,
+                        },
+                    );
+                }
+            } catch (error) {
+                console.log(error);
             }
         });
     },
@@ -59,14 +73,6 @@ const reminder = {
                 );
 
                 // Gửi thông báo
-                eventFeature.sendNotifyEvent('', {
-                    user_name: remind.user_name,
-                    event_name: remind.title,
-                    company_name: remind.company_name,
-                    location_name: remind.location_name,
-                    time: remind.scheduled_date,
-                });
-
                 if (remind.expiration_time <= now) {
                     dataBaseModel.update(
                         connection,

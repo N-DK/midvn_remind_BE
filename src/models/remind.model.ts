@@ -1,6 +1,7 @@
 import { PoolConnection } from 'mysql2';
 import DatabaseModel from './database.model';
 import { tables } from '../constants/tableName.constant';
+import redisModel from './redis.model';
 
 const INFINITY = 2147483647;
 
@@ -98,6 +99,28 @@ class RemindModel extends DatabaseModel {
                 }
             });
         });
+
+        // save redis
+        await redisModel.hSet(
+            'remind',
+            remind_id,
+            JSON.stringify({
+                img_url: data?.img_url ?? null,
+                note_repair: data?.note_repair ?? null,
+                history_repair: data?.history_repair ?? null,
+                current_kilometers: data?.current_kilometers ?? 0,
+                cumulative_kilometers: data?.cumulative_kilometers ?? 0,
+                expiration_time: data?.expiration_time ?? 0,
+                is_delete: 0,
+                time_before: data?.time_before ?? INFINITY,
+                is_notified: data?.is_notified ?? 0,
+                is_received: data?.is_received ?? 0,
+                remind_category_id: data.cate_id,
+                create_time: Date.now(),
+            }),
+            'remind.models.ts',
+            Date.now(),
+        );
 
         return result;
     }

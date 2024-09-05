@@ -6,7 +6,6 @@ import helmet from 'helmet';
 import compression from 'compression';
 const app = express();
 
-
 // const filesDirectory = path.join(__dirname, 'files');
 // app.use('/files', express.static(filesDirectory));
 
@@ -48,9 +47,9 @@ import { initMqtt } from './config/mqtt.config';
 initMqtt();
 
 // remind
-// import reminder from './utils/reminder.util';
-// reminder.init();
-// reminder.remindExpirationTime();
+import reminder from './utils/reminder.util';
+reminder.init();
+reminder.start();
 
 // import routes
 import route from './routes';
