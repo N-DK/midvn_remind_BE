@@ -6,6 +6,10 @@ import helmet from 'helmet';
 import compression from 'compression';
 const app = express();
 
+
+// const filesDirectory = path.join(__dirname, 'files');
+// app.use('/files', express.static(filesDirectory));
+
 app.use(morgan('dev'));
 app.use(helmet());
 app.use(
