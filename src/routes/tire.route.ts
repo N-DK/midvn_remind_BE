@@ -33,7 +33,7 @@ router.patch('/delete-tire/:id', verifyToken, tireController.deleteTire);
 router.patch('/restore-tire/:id', verifyToken, tireController.restoreTire);
 
 router.put(
-    '/update-tire',
+    '/update-tire/:tire_id',
     verifyToken,
     [
         body('seri', constants.NOT_EMPTY)
@@ -43,9 +43,6 @@ router.put(
             .isString()
             .withMessage(constants.VALIDATE_DATA),
         body('brand', constants.NOT_EMPTY)
-            .isString()
-            .withMessage(constants.VALIDATE_DATA),
-        body('license_plate', constants.NOT_EMPTY)
             .isString()
             .withMessage(constants.VALIDATE_DATA),
     ],
