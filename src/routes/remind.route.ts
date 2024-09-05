@@ -11,6 +11,13 @@ router.get('/get-all',
     remindController.getAll
 )
 
+router.get(
+    '/get-vehicle-id/:id',
+    [param('id', constants.VALIDATE_DATA).isNumeric()],
+    verifyToken,
+    remindController.getByVehicleId
+)
+
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);
 };

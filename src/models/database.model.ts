@@ -277,13 +277,13 @@ class DatabaseModel {
     fields:string = "*",
     where:string = "",
     conditions: any = [],
+
     joins: {
       table: string;
       on: string;
       type?: "LEFT" | "INNER" | "RIGHT";
     }[] = []
   ) {
-
     return await new Promise((resolve, reject) => {
       const joinClauses = joins
         .map((join) => {
@@ -293,8 +293,6 @@ class DatabaseModel {
         .join(" ");
         
       const query = `SELECT ${fields} FROM ${mainTable} ${joinClauses} WHERE ${where}`;
-
-      console.log(query);
       
 
       db.query(

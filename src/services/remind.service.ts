@@ -15,7 +15,19 @@ class RemindService{
            throw error;
         }
     }
-
+    async getByVehicleId(vehicleId: number){
+        try{
+            const { conn } = await getConnection();
+            try{
+                const result = await remindModel.getByVehicleId(conn,vehicleId);
+                return result;
+            }catch(error){
+                throw error;
+            }
+        }catch(error){
+            throw error;
+        }
+    }
 }
 
 export default new RemindService();
