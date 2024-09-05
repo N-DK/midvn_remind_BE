@@ -26,7 +26,7 @@
         "mysql2": "^3.11.0",
         "node-cron": "^3.0.3",
         "nodemon": "^3.1.4",
-        "notify-services": "^1.0.1",
+        "notify-services": "^1.0.2",
         "redis": "^4.7.0",
         "ts-node": "^10.9.2",
         "typescript": "^5.5.3",
