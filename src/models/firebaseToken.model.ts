@@ -34,5 +34,14 @@ class TokenFirebase extends DatabaseModel {
 
     return result;
   }
+
+  async deleteToken(conn: PoolConnection, data: any){
+    const result = await this.delete(
+      conn,
+      tables.tableTokenFirebase,
+      'token = ?',
+      data.token
+    );
+  }
 }
 export default new TokenFirebase();

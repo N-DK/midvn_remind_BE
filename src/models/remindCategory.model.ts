@@ -7,13 +7,23 @@ class RemindCategoryModel extends DatabaseModel {
         super();
     }
 
-    public async getAllRows(con: PoolConnection): Promise<any> {
+    public async getAllRows(con: PoolConnection){
         const result = await this.select(
             con,
             tables.tableRemindCategory,
             '*',
             'id IS NOT NULL',
             [],
+        );
+        return result;
+    }
+    async getByUserID(con: PoolConnection, userID: number){
+        const result = await this.select(
+            con,
+            tables.tableRemindCategory,
+            '*',
+            'user_id = ? OR user_id IS NULL',
+            [userID]
         );
         return result;
     }

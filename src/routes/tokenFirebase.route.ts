@@ -6,17 +6,27 @@ import tokenFirebaseController from "../controllers/firebaseToken.controlller";
 
 const router: Router = express.Router();
 
+router.post(
+  "/add",
+  [
+    body("token", constants.NOT_EMPTY)
+      .isString()
+      .withMessage(constants.VALIDATE_DATA),
+  ],
+  verifyToken,
+  tokenFirebaseController.addFirebaseToken
+);
 
-
-router.post('/add', 
-    [body("token", constants.NOT_EMPTY)
-        .isString()
-        .withMessage(constants.VALIDATE_DATA)],
-    verifyToken,
-    tokenFirebaseController.addFirebaseToken
-)
-
+router.delete(
+  "/delete",
+  [
+    body("token", constants.NOT_EMPTY)
+      .isString()
+      .withMessage(constants.VALIDATE_DATA),
+  ],
+  verifyToken,
+  tokenFirebaseController.deleteFirebaseToken
+);
 export default (app: Express) => {
-    app.use("/api/v1/token-firebase", router);
+  app.use("/api/v1/token-firebase", router);
 };
-  

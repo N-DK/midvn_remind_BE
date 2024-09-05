@@ -19,6 +19,20 @@ class TokenFirebaseService {
             throw error;
         }
     }
-
+    async deleteToken(data:any){
+        try{
+            const { conn } = await getConnection();
+            try {
+                const result = await TokenFirebase.deleteToken(conn, data);
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        }catch (error: any) {
+            throw error;
+        }
+    }
 }
 export default new TokenFirebaseService();
