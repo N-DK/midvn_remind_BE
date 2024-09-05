@@ -10,8 +10,18 @@ router.get('/get-all', remindCategoryController.getAllRows);
 router.get('/get-all/:id',verifyToken ,remindCategoryController.getByUserId);
 
 router.post('/add', 
-    
-)
+    [body("name", constants.NOT_EMPTY)
+      .isString()
+      .withMessage(constants.VALIDATE_DATA),
+    body("desc", constants.NOT_EMPTY)
+      .isString()
+      .withMessage(constants.VALIDATE_DATA),
+    body("icon", constants.NOT_EMPTY)
+      .isString()
+      .withMessage(constants.VALIDATE_DATA)],
+    verifyToken,
+    remindCategoryController.addCategory
+);
 
 export default (app: Express) => {
     app.use('/api/v1/remind/category', router);

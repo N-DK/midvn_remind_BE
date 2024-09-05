@@ -27,6 +27,20 @@ class RemindCategoryModel extends DatabaseModel {
         );
         return result;
     }
+    async addCategory(con: PoolConnection, data: any, userID: number){
+        const result = await this.insert(
+            con,
+            tables.tableRemindCategory,
+            {
+               name: data.name,
+               desc: data.desc,
+               icon: data.icon,
+               user_id: userID,
+               create_time: Date.now()
+            }
+        );
+        return result;
+    }
 }
 
 export default new RemindCategoryModel();
