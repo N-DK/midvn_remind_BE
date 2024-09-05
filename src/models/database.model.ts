@@ -37,10 +37,9 @@ class DatabaseModel {
     async insert(db: PoolConnection, tableName: string, data: any) {
         return await new Promise((resolve, reject) => {
             const query = `INSERT INTO ${tableName} SET ?`;
-            db.query(query, data, (err: QueryError | null, dataRes: any) => {
+            db.query(query, data, (err: any | null, dataRes: any) => {
                 if (err) {
-                    console.log(err);
-                    return reject({ msg: constants.ERROR });
+                    return reject({ msg: err.sqlMessage });
                 }
                 return resolve(dataRes?.insertId);
             });
@@ -131,10 +130,10 @@ class DatabaseModel {
                     : typeof data === 'object'
                     ? [data, condition]
                     : [data, ...condition],
-                (err, dataRes: any) => {
+                (err: any, dataRes: any) => {
                     if (err) {
                         console.log(err);
-                        return reject({ msg: constants.ERROR });
+                        return reject({ msg: err.sqlMessage });
                     }
                     if (dataRes.affectedRows === 0 && checkExit) {
                         return reject({
