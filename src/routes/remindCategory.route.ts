@@ -7,7 +7,7 @@ const router: Router = express.Router();
 
 router.get('/get-all', remindCategoryController.getAllRows);
 
-router.get('/get-all/:id',verifyToken ,remindCategoryController.getByUserId);
+router.get('/get-all/by-user',verifyToken ,remindCategoryController.getByUserId);
 
 router.post('/add', 
     [body("name", constants.NOT_EMPTY)
