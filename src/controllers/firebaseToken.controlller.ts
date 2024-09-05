@@ -10,6 +10,13 @@ class TokenFirebaseController{
         const addToken = await VehicleNoGPSService.addToken(data,userId);
         CREATED(res, addToken);
     });
+
+    deleteFirebaseToken = catchAsync(async (req:Request, res:Response) => {
+        const data = req.body;
+        const addToken = await VehicleNoGPSService.deleteToken(data);
+        DELETE(res, addToken);
+    });
+
 }
 
 export default new TokenFirebaseController;

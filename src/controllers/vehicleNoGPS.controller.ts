@@ -36,7 +36,6 @@ class VehicleNoGPSController {
         const result = await vehicleNoGPSService.deleteVehicleNoGPS(parseInt(req.params.id),user_id);
         DELETE(res, result);
     });
-    
 }
 
 export default new VehicleNoGPSController();
