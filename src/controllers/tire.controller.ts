@@ -25,7 +25,7 @@ class TireController {
         async (req: Request, res: Response, next: NextFunction) => {
             // { tire_id, seri, size, brand }
             const tire_id = req.params;
-            const data = { ...req.body, tire_id };
+            const data = { ...req.body, ...tire_id };
             const tire = await tireService.updateTire(data);
             UPDATE(res, tire);
         },
