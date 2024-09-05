@@ -16,6 +16,14 @@ class RemindCategoryController {
             GET(res, data);
         },
     );
+
+    addCategory = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const dataBody = req.body;
+            const data = await remindCategoryService.addCategory(dataBody,parseInt(req.body.user.user_id));
+            GET(res, data);
+        },
+    )
 }
 
 export default new RemindCategoryController();

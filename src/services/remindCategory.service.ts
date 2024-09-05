@@ -33,6 +33,22 @@ class RemindCategoryService {
             throw error;
         }
     }
+
+    async addCategory(data: any, UserID : number){
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindCategoryModel.addCategory(conn, data, UserID);
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error: any) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindCategoryService();
