@@ -128,7 +128,7 @@ class RemindModel extends DatabaseModel {
             history_repair: data?.history_repair ?? null,
             current_kilometers: data?.current_kilometers ?? 0,
             cumulative_kilometers: data?.cumulative_kilometers ?? 0,
-            expiration_time: data?.expiration_time ?? 0,
+            expiration_time: data?.time_expire ?? 0,
             is_delete: 0,
             time_before: data?.time_before ?? INFINITY,
             is_notified: data?.is_notified ?? 0,
@@ -156,7 +156,7 @@ class RemindModel extends DatabaseModel {
         });
 
         // save redis
-        await redisModel.hSet(
+        const redis = await redisModel.hSet(
             'remind',
             remind_id,
             JSON.stringify({
@@ -176,6 +176,8 @@ class RemindModel extends DatabaseModel {
             'remind.models.ts',
             Date.now(),
         );
+
+        console.log(redis);
 
         return result;
     }

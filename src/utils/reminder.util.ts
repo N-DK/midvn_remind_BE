@@ -5,6 +5,7 @@ import { eventFeature, remindFeature } from 'notify-services';
 import { getConnection } from '../dbs/init.mysql';
 import GPSApi from '../api/GPS.api';
 import { tables } from '../constants/tableName.constant';
+import redisModel from '../models/redis.model';
 
 const dataBaseModel = new DatabaseModel();
 
@@ -29,15 +30,22 @@ const reminder = {
                     gps?.total_distance ? 'OR cumulative_kilometers >= ?' : ''
                 })`;
                 // const whereClause = 'is_received = 0 AND is_notified = 0';
-                const reminds: any = await dataBaseModel.select(
-                    connection,
-                    tables.tableRemind,
-                    '*',
-                    whereClause,
-                    gps?.total_distance ? [now, gps?.total_distance] : [now],
+                // const reminds: any = await dataBaseModel.select(
+                //     connection,
+                //     tables.tableRemind,
+                //     '*',
+                //     whereClause,
+                //     gps?.total_distance ? [now, gps?.total_distance] : [now],
+                // );
+
+                // get all remind from redis
+                const { data } = await redisModel.hGetAll(
+                    'remind',
+                    'remind.model.ts',
+                    Date.now(),
                 );
 
-                for (const remind of reminds) {
+                for (const remind of Object.values(data)) {
                     // Gửi thông báo
 
                     await remindFeature.sendNotifyRemind(
