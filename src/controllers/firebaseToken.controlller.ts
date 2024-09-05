@@ -19,4 +19,4 @@ class TokenFirebaseController{
 
 }
 
-export default new TokenFirebaseController;
+export default new TokenFirebaseController();
