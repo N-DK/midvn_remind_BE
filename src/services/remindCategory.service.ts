@@ -18,6 +18,37 @@ class RemindCategoryService {
             throw new BusinessLogicError(error.msg);
         }
     }
+    async getByUserID(UserID : number){
+        try{
+            const { conn } = await getConnection();
+            try {
+                const data = await remindCategoryModel.getByUserID(conn, UserID);
+                return data;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        }catch (error: any) {
+            throw error;
+        }
+    }
+
+    async addCategory(data: any, UserID : number){
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindCategoryModel.addCategory(conn, data, UserID);
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error: any) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindCategoryService();
