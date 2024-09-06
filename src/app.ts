@@ -55,6 +55,10 @@ reminder.start();
 import route from './routes';
 route(app);
 
+// import swagger
+import swagger from './swagger';
+swagger(app);
+
 //middlewares handle error
 import {
     is404Handler,
