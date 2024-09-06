@@ -54,6 +54,16 @@ class RemindController {
             UPDATE(res, remind);
         },
     );
+
+    search = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const data = await remindService.search(
+                req.body.user.userId,
+                req.query,
+            );
+            GET(res, data);
+        },
+    );
 }
 
 export default new RemindController();

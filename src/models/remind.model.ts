@@ -131,7 +131,7 @@ class RemindModel extends DatabaseModel {
             time_before: data?.time_before ?? INFINITY,
             is_notified: data?.is_notified ?? 0,
             is_received: data?.is_received ?? 0,
-            remind_category_id: data.remind_category_id,
+            remind_category_id: data.cate_id,
             create_time: Date.now(),
         });
 
