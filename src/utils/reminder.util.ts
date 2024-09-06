@@ -53,8 +53,8 @@ const reminder = {
                         'http://localhost:3007',
                         {
                             name_remind: remind.note_repair,
-                            vehicle_name: remind.vehicles,
-                            user_id: 5,
+                            vehicle_name: 'vehicle_name',
+                            user_id: remind.user_id,
                         },
                     );
                 }

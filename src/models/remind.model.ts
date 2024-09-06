@@ -128,12 +128,12 @@ class RemindModel extends DatabaseModel {
             history_repair: data?.history_repair ?? null,
             current_kilometers: data?.current_kilometers ?? 0,
             cumulative_kilometers: data?.cumulative_kilometers ?? 0,
-            expiration_time: data?.time_expire ?? 0,
+            expiration_time: data?.expiration_time ?? 0,
             is_delete: 0,
             time_before: data?.time_before ?? INFINITY,
             is_notified: data?.is_notified ?? 0,
             is_received: data?.is_received ?? 0,
-            remind_category_id: data.cate_id,
+            remind_category_id: data.remind_category_id,
             create_time: Date.now(),
         });
 
@@ -166,15 +166,16 @@ class RemindModel extends DatabaseModel {
                     note_repair: data?.note_repair ?? null,
                     history_repair: data?.history_repair ?? null,
                     current_kilometers: data?.current_kilometers ?? 0,
-                    cumulative_kilometers: data?.km_expire ?? 0,
-                    expiration_time: data?.time_expire ?? 0,
+                    cumulative_kilometers: data?.cumulative_kilometers ?? 0,
+                    expiration_time: data?.expiration_time ?? 0,
                     is_delete: 0,
                     time_before: data?.time_before ?? INFINITY,
                     is_notified: data?.is_notified ?? 0,
                     is_received: data?.is_received ?? 0,
                     remind_category_id: data.cate_id,
-                    vehicles: data?.vehicles,
                     create_time: Date.now(),
+                    vehicles: data?.vehicles,
+                    user_id: data.user.userId,
                 }),
                 'remind.models.ts',
                 Date.now(),
@@ -201,6 +202,75 @@ class RemindModel extends DatabaseModel {
             'id',
             remindID,
         );
+        return result;
+    }
+
+    async search(con: PoolConnection, userID: number, query: any) {
+        let params: any[] = [userID];
+        let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0`;
+
+        if (query.license_plate) {
+            whereClause += ' AND name ILIKE ?';
+            params.push(`%${query.license_plate}%`);
+        }
+        if (query.license) {
+            whereClause += ' AND license ILIKE ?';
+            params.push(`%${query.license}%`);
+        }
+
+        const result = await this.selectWithJoins(
+            con,
+            tables.tableVehicleNoGPS,
+            `${tables.tableVehicleNoGPS}.id AS vehicle_id,
+               ${tables.tableVehicleNoGPS}.license_plate AS license_plate,
+               ${tables.tableVehicleNoGPS}.user_id AS user_id,
+               ${tables.tableVehicleNoGPS}.license AS license,
+               ${tables.tableVehicleNoGPS}.create_time AS vehicle_create_time,
+               ${tables.tableVehicleNoGPS}.update_time AS vehicle_update_time,
+               
+               ${tables.tableRemind}.id AS remind_id,
+               ${tables.tableRemind}.name AS remind_name,
+               ${tables.tableRemind}.img_url AS remind_img_url,
+               ${tables.tableRemind}.note_repair AS note_repair,
+               ${tables.tableRemind}.history_repair AS history_repair,
+               ${tables.tableRemind}.current_kilometres AS current_kilometres,
+               ${tables.tableRemind}.cumulative_kilometers AS cumulative_kilometers,
+               ${tables.tableRemind}.expiration_time AS expiration_time,
+               ${tables.tableRemind}.time_before AS time_before,
+               ${tables.tableRemind}.is_notified AS is_notified,
+               ${tables.tableRemind}.is_received AS is_received,
+               ${tables.tableRemind}.create_time AS remind_create_time,
+               ${tables.tableRemind}.update_time AS remind_update_time,
+               
+               ${tables.tableRemindCategory}.id AS category_id,
+               ${tables.tableRemindCategory}.name AS category_name,
+               ${tables.tableRemindCategory}.desc AS category_desc,
+               ${tables.tableRemindCategory}.icon AS category_icon,
+               ${tables.tableRemindCategory}.create_time AS category_create_time,
+               ${tables.tableRemindCategory}.update_time AS category_update_time,
+               ${tables.tableRemindCategory}.is_deleted AS category_is_deleted`,
+
+            whereClause,
+            params,
+            [
+                {
+                    table: tables.tableRemindVehicle,
+                    on: `${tables.tableVehicleNoGPS}.id = ${tables.tableRemindVehicle}.vehicle_id`,
+                    type: 'INNER',
+                },
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
+                    type: 'INNER',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
+                    type: 'INNER',
+                },
+            ],
+        );
+
         return result;
     }
 }
