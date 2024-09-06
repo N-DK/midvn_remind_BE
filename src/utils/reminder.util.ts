@@ -22,21 +22,20 @@ const reminder = {
             // Mỗi phút kiểm tra
             try {
                 console.log('Đang kiểm tra nhắc nhở');
+                const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
                 const now = Date.now(); // Lấy thời gian hiện tại
                 // const gps = (await GPSApi.getGPSData())?.data; // Lấy dữ liệu GPS
                 const gps: any = {};
-                const whereClause = `is_received = 0 AND is_notified = 0 AND (expiration_time - ? <= time_before ${
-                    gps?.total_distance ? 'OR cumulative_kilometers >= ?' : ''
-                })`;
+                const whereClause = `is_received = 0 AND is_notified = 0 AND (expiration_time - ? <= time_before)`;
                 // const whereClause = 'is_received = 0 AND is_notified = 0';
-                // const reminds: any = await dataBaseModel.select(
-                //     connection,
-                //     tables.tableRemind,
-                //     '*',
-                //     whereClause,
-                //     gps?.total_distance ? [now, gps?.total_distance] : [now],
-                // );
+                const results: any = await dataBaseModel.select(
+                    connection,
+                    tables.tableRemind,
+                    '*',
+                    whereClause,
+                    gps?.total_distance ? [now, gps?.total_distance] : [now],
+                );
 
                 // get all remind from redis
                 const { data } = await redisModel.hGetAll(
@@ -45,14 +44,16 @@ const reminder = {
                     Date.now(),
                 );
 
-                for (const remind of Object.values(data)) {
-                    // Gửi thông báo
+                const reminds = isRedisReady ? Object.values(data) : results;
+
+                for (const remind of reminds) {
+                    // select vehicle by remind id from tbl_remind_vehicle
 
                     await remindFeature.sendNotifyRemind(
                         'http://localhost:3007',
                         {
-                            name_remind: 'Change oil',
-                            vehicle_name: 'Honda Civic',
+                            name_remind: remind.note_repair,
+                            vehicle_name: remind.vehicles,
                             user_id: 5,
                         },
                     );

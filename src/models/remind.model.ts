@@ -156,28 +156,30 @@ class RemindModel extends DatabaseModel {
         });
 
         // save redis
-        const redis = await redisModel.hSet(
-            'remind',
-            remind_id,
-            JSON.stringify({
-                img_url: data?.img_url ?? null,
-                note_repair: data?.note_repair ?? null,
-                history_repair: data?.history_repair ?? null,
-                current_kilometers: data?.current_kilometers ?? 0,
-                cumulative_kilometers: data?.cumulative_kilometers ?? 0,
-                expiration_time: data?.expiration_time ?? 0,
-                is_delete: 0,
-                time_before: data?.time_before ?? INFINITY,
-                is_notified: data?.is_notified ?? 0,
-                is_received: data?.is_received ?? 0,
-                remind_category_id: data.cate_id,
-                create_time: Date.now(),
-            }),
-            'remind.models.ts',
-            Date.now(),
-        );
-
-        console.log(redis);
+        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        if (isRedisReady) {
+            await redisModel.hSet(
+                'remind',
+                remind_id,
+                JSON.stringify({
+                    img_url: data?.img_url ?? null,
+                    note_repair: data?.note_repair ?? null,
+                    history_repair: data?.history_repair ?? null,
+                    current_kilometers: data?.current_kilometers ?? 0,
+                    cumulative_kilometers: data?.km_expire ?? 0,
+                    expiration_time: data?.time_expire ?? 0,
+                    is_delete: 0,
+                    time_before: data?.time_before ?? INFINITY,
+                    is_notified: data?.is_notified ?? 0,
+                    is_received: data?.is_received ?? 0,
+                    remind_category_id: data.cate_id,
+                    vehicles: data?.vehicles,
+                    create_time: Date.now(),
+                }),
+                'remind.models.ts',
+                Date.now(),
+            );
+        }
 
         return result;
     }
