@@ -9,6 +9,7 @@ class RemindModel extends DatabaseModel {
     constructor() {
         super();
     }
+
     async getAll(con: PoolConnection, userID: number) {
         const result = await this.selectWithJoins(
             con,
@@ -64,6 +65,7 @@ class RemindModel extends DatabaseModel {
 
         return result;
     }
+
     async getByVehicleId(con: PoolConnection, vehicleID: string) {
         const result = await this.selectWithJoins(
             con,
@@ -181,6 +183,7 @@ class RemindModel extends DatabaseModel {
 
         return result;
     }
+
     async updateNotifiedOff(con: PoolConnection, remindID: number) {
         const result = await this.update(
             con,
@@ -220,6 +223,7 @@ class RemindModel extends DatabaseModel {
         }
         return result;
     }
+
     async updateNotifiedON(con: PoolConnection, remindID: number) {
         const result = await this.update(
             con,
@@ -296,10 +300,10 @@ class RemindModel extends DatabaseModel {
         let params: any[] = [userID];
         let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND 
             (
-                license_plate LIKE '%${query.keyword}%' OR
-                license LIKE '%${query.keyword}%'
+                note_repair LIKE '%${query.keyword}%' OR
+                cumulative_kilometers LIKE '%${query.keyword}%' OR
+                ${tables.tableRemindCategory}.name LIKE '%${query.keyword}%'
             )`;
-
         // if (query.license_plate) {
         //     whereClause += ' AND license_plate LIKE ?';
         //     params.push(`%${query.license_plate}%`);
