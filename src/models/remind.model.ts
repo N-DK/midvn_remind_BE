@@ -104,17 +104,17 @@ class RemindModel extends DatabaseModel {
         {
           table: tables.tableRemindVehicle,
           on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-          type: "INNER",
+          type: "LEFT",
         },
         {
           table: tables.tableRemind,
           on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
-          type: "INNER",
+          type: "LEFT",
         },
         {
           table: tables.tableRemindCategory,
           on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
-          type: "INNER",
+          type: "LEFT",
         },
       ]
     );
@@ -303,7 +303,9 @@ class RemindModel extends DatabaseModel {
             (
                 note_repair LIKE '%${query.keyword}%' OR
                 cumulative_kilometers LIKE '%${query.keyword}%' OR
-                ${tables.tableRemindCategory}.name LIKE '%${query.keyword}%'
+                ${tables.tableRemindCategory}.name LIKE '%${query.keyword}%' OR
+                ${tables.tableVehicleNoGPS}.license_plate LIKE '%${query.keyword}%' OR 
+                ${tables.tableVehicleNoGPS}.license LIKE '%${query.keyword}%'
             )`;
     // if (query.license_plate) {
     //     whereClause += ' AND license_plate LIKE ?';
@@ -350,17 +352,17 @@ class RemindModel extends DatabaseModel {
         {
           table: tables.tableRemindVehicle,
           on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-          type: "INNER",
+          type: "LEFT",
         },
         {
           table: tables.tableRemind,
           on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
-          type: "INNER",
+          type: "LEFT",
         },
         {
           table: tables.tableRemindCategory,
           on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
-          type: "INNER",
+          type: "LEFT",
         },
       ]
     );

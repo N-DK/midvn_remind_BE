@@ -73,7 +73,7 @@ class TireModel extends DatabaseModel {
       conn,
       tables.tableTire,
       '*',
-      `license_plate = '${data.license_plate}' AND (seri LIKE '%${data.keyword}%' OR brand LIKE '%${data.keyword}%')`
+      `license_plate = '${data.vehicleID}' AND (seri LIKE '%${data.keyword}%' OR brand LIKE '%${data.keyword}%')`
     );
     return result;
   }
