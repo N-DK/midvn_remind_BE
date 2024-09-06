@@ -1,7 +1,7 @@
 import { PoolConnection } from 'mysql2';
 import cron from 'node-cron';
 import DatabaseModel from '../models/database.model';
-import { eventFeature, remindFeature } from 'notify-services';
+import { remindFeature } from 'notify-services';
 import { getConnection } from '../dbs/init.mysql';
 import GPSApi from '../api/GPS.api';
 import { tables } from '../constants/tableName.constant';
@@ -27,28 +27,32 @@ const reminder = {
                 const now = Date.now(); // Lấy thời gian hiện tại
                 // const gps = (await GPSApi.getGPSData())?.data; // Lấy dữ liệu GPS
                 const gps: any = {};
-                const whereClause = `is_received = 0 AND is_notified = 0 AND (expiration_time - ? <= time_before)`;
-                // const whereClause = 'is_received = 0 AND is_notified = 0';
-                const results: any = await dataBaseModel.select(
-                    connection,
-                    tables.tableRemind,
-                    '*',
-                    whereClause,
-                    gps?.total_distance ? [now, gps?.total_distance] : [now],
-                );
+                let reminds = [];
 
-                // get all remind from redis
-                const { data } = await redisModel.hGetAll(
-                    'remind',
-                    'remind.model.ts',
-                    Date.now(),
-                );
-
-                const reminds = isRedisReady ? Object.values(data) : results;
+                if (isRedisReady) {
+                    // get all remind from redis
+                    const { data } = await redisModel.hGetAll(
+                        'remind',
+                        'remind.model.ts',
+                        Date.now(),
+                    );
+                    reminds = Object.values(data);
+                } else {
+                    const whereClause = `is_received = 0 AND is_notified = 0 AND (expiration_time - ? <= time_before)`;
+                    const results: any = await dataBaseModel.select(
+                        connection,
+                        tables.tableRemind,
+                        '*',
+                        whereClause,
+                        gps?.total_distance
+                            ? [now, gps?.total_distance]
+                            : [now],
+                    );
+                    reminds = results;
+                }
 
                 for (const r of reminds) {
                     // select vehicle by remind id from tbl_remind_vehicle
-
                     const remind = JSON.parse(r);
 
                     // await remindFeature.sendNotifyRemind(

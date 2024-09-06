@@ -41,13 +41,10 @@ class VehicleNoGPSController {
         );
         DELETE(res, result);
     });
-    search = catchAsync(async (req: Request, res: Response)=> {
+    search = catchAsync(async (req: Request, res: Response) => {
         const user_id = req.body.user.userId;
         const dataBody = req.body;
-        const data = await vehicleNoGPSService.search(
-            dataBody,
-            user_id
-        );
+        const data = await vehicleNoGPSService.search(dataBody, user_id);
         GET(res, data);
     });
 }
