@@ -105,6 +105,21 @@ class VehicleNoGPSService {
         throw new BusinessLogicError(error.msg);
       }
   }
+  async search(data:any, userID :number){
+    try{
+      const { conn } = await getConnection();
+      try {
+        const result = await vehicleNoGPSModel.search(conn, data, userID);
+        return result;
+      } catch (error) {
+        throw error;
+      } finally {
+        conn.release();
+      }
+    } catch (error: any) {
+      throw new BusinessLogicError(error.msg);
+    }
+  }
 }
 
 export default new VehicleNoGPSService();

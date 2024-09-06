@@ -132,6 +132,28 @@ class RemindService {
             throw error;
         }
     }
+    async updateIsDeleted(remindID: number) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const remind = await remindModel.updateIsDeleted(
+                    conn,
+                    remindID,
+                );
+                return remind;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error: any) {
+            throw new BusinessLogicError(
+                'Đã xảy ra lỗi',
+                [error.msg as never],
+                error.status,
+            );
+        }
+    }
 }
 
 export default new RemindService();

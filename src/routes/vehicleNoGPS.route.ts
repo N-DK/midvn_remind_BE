@@ -17,38 +17,48 @@ router.get(
 
 router.post(
   "/add-vehicle",
-  [ 
+  [
     body().isArray().withMessage(constants.VALIDATE_DATA),
     body("*.license_plate", constants.NOT_EMPTY)
       .isString()
       .withMessage(constants.VALIDATE_DATA),
     body("*.license", constants.NOT_EMPTY)
       .isString()
-      .withMessage(constants.VALIDATE_DATA),  
+      .withMessage(constants.VALIDATE_DATA),
   ],
   verifyToken,
   vehicleNoGPSController.addVehicleNoGPS
 );
 
-router.put("/update-vehicle/:id",
-    [
-        param("id", constants.VALIDATE_DATA).isNumeric(),
-        body("license_plate", constants.NOT_EMPTY)
-         .isString()
-         .withMessage(constants.VALIDATE_DATA),
-        body("license", constants.NOT_EMPTY)
-         .isString()
-         .withMessage(constants.VALIDATE_DATA),
-      ],
-    verifyToken,
-    vehicleNoGPSController.updateVehicleNoGPS
+router.put(
+  "/update-vehicle/:id",
+  [
+    param("id", constants.VALIDATE_DATA).isNumeric(),
+    body("license_plate", constants.NOT_EMPTY)
+      .isString()
+      .withMessage(constants.VALIDATE_DATA),
+    body("license", constants.NOT_EMPTY)
+      .isString()
+      .withMessage(constants.VALIDATE_DATA),
+  ],
+  verifyToken,
+  vehicleNoGPSController.updateVehicleNoGPS
 );
 
+router.put(
+  "/delete-vehicle/:id",
+  [param("id", constants.VALIDATE_DATA).isNumeric()],
+  verifyToken,
+  vehicleNoGPSController.deleteVehicleNoGPS
+);
 
-router.put("/delete-vehicle/:id",
-    [param("id", constants.VALIDATE_DATA).isNumeric()],
-    verifyToken,
-    vehicleNoGPSController.deleteVehicleNoGPS
+router.get(
+  "/search",
+  body("keyword", constants.NOT_EMPTY)
+    .isString()
+    .withMessage(constants.VALIDATE_DATA),
+  verifyToken,
+  vehicleNoGPSController.search
 );
 
 router.delete("/convert-toNoGPS");
