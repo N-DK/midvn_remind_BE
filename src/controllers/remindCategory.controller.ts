@@ -12,7 +12,9 @@ class RemindCategoryController {
     );
     getByUserId = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
-            const data = await remindCategoryService.getByUserID(parseInt(req.body.user.user_id));
+            const data = await remindCategoryService.getByUserID(
+                parseInt(req.body.user.userId),
+            );
             GET(res, data);
         },
     );
@@ -20,10 +22,13 @@ class RemindCategoryController {
     addCategory = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             const dataBody = req.body;
-            const data = await remindCategoryService.addCategory(dataBody,parseInt(req.body.user.user_id));
+            const data = await remindCategoryService.addCategory(
+                dataBody,
+                parseInt(req.body.user.userId),
+            );
             GET(res, data);
         },
-    )
+    );
 }
 
 export default new RemindCategoryController();

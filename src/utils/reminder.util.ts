@@ -46,15 +46,17 @@ const reminder = {
 
                 const reminds = isRedisReady ? Object.values(data) : results;
 
-                for (const remind of reminds) {
+                for (const r of reminds) {
                     // select vehicle by remind id from tbl_remind_vehicle
+
+                    const remind = JSON.parse(r);
 
                     await remindFeature.sendNotifyRemind(
                         'http://localhost:3007',
                         {
-                            name_remind: remind.note_repair,
+                            name_remind: remind.note_repair + ' NDK',
                             vehicle_name: remind.vehicles,
-                            user_id: 5,
+                            user_id: remind.user_id,
                         },
                     );
                 }
