@@ -2,7 +2,6 @@ import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { Api401Error } from '../core/error.response';
 import configureEnvironment from '../config/dotenv.config';
-import { buffer } from 'stream/consumers';
 
 const { JWT_SECRET_KEY } = configureEnvironment();
 
@@ -25,6 +24,7 @@ export const verifyToken = (
     } else {
         return next(new Api401Error('Unauthorized'));
     }
+
     // jwt.verify(token, JWT_SECRET_KEY as string, (err: any, user: any) => {
     //     if (err) {
     //         return next(new Api401Error('Unauthorized'));
