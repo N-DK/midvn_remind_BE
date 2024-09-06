@@ -102,7 +102,20 @@ router.put(
     verifyToken,
     remindController.updateIsDeleted,
 );
-
+// yes ==> call api current_kilometers = current_kilometers of result return from api, cumulative_kilometers = cumulative_kilometers of remind_id
+//         expiration_time = Date.now() + (Date.now() - expiration_time of remind_id)
+//         time_before = time_before of remind_id
+//         return {expiration_time, time_before, cumulative_kilometers}
+// no ==> is_received = 1, update_time = Date.now() return {}
+// router.patch(
+//     '/finish-remind/:id',
+//     [
+//         param('id', constants.VALIDATE_DATA).isNumeric(),
+//         body('is_continue', constants.VALIDATE_DATA).isNumeric(),
+//     ],
+//     verifyToken,
+//     remindController.finishRemind,
+// );
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);
 };
