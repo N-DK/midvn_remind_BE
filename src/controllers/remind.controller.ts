@@ -27,7 +27,6 @@ class RemindController {
             CREATED(res, remind);
         },
     );
-
     updateNotifiedOff = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             const result = await remindService.updateNotifiedOff(

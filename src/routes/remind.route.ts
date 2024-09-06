@@ -56,6 +56,38 @@ router.patch(
     [param('id', constants.VALIDATE_DATA).isNumeric()],
     remindController.updateNotifiedOn,
 );
+  "/update-notified-off/:id",
+  verifyToken,
+  [param("id", constants.VALIDATE_DATA).isNumeric()],
+  remindController.updateNotifiedOff
+);
+
+router.patch(
+  "/update-notified-on/:id",
+  verifyToken,
+  [param("id", constants.VALIDATE_DATA).isNumeric()],
+  remindController.updateNotifiedOn
+);
+
+router.put(
+  "/update/:id",
+  [
+    // param("id", constants.VALIDATE_DATA).isNumeric(),
+    // body("name").isString().withMessage(constants.VALIDATE_DATA),
+    // body("img_url").isString().withMessage(constants.VALIDATE_DATA),
+    // body("note_repair").isString().withMessage(constants.VALIDATE_DATA),
+    // body("history_repair").isString().withMessage(constants.VALIDATE_DATA),
+    // body("current_kilometres").withMessage(constants.VALIDATE_DATA),
+    // body("cumulative_kilometers").withMessage(constants.VALIDATE_DATA),
+    // body("expiration_time").withMessage(constants.VALIDATE_DATA),
+    // body("time_before").withMessage(constants.VALIDATE_DATA),
+    // body("is_notified").withMessage(constants.VALIDATE_DATA),
+    // body("is_received").withMessage(constants.VALIDATE_DATA),
+    // body("update_time").withMessage(constants.VALIDATE_DATA),
+  ],
+  verifyToken,
+  remindController.update
+);
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);
 };
