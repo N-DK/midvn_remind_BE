@@ -38,6 +38,13 @@ class RemindController {
       UPDATE(res, result);
     }
   )
+  update = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const data = req.body;
+      const remind = await remindService.update(data, parseInt(req.params.id));
+      UPDATE(res, remind);
+    }
+  )
 }
 
 export default new RemindController();
