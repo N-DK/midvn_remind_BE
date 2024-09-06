@@ -6,7 +6,18 @@ import remindController from "../controllers/remind.controller";
 
 const router: Router = express.Router();
 
-router.get("/get-all", verifyToken, remindController.getAll);
+// router.get("/get-all", verifyToken, remindController.getAll);
+
+// router.get("/search", verifyToken, remindController.search);
+
+router.get("/get-all", verifyToken, (req, res, next) => {
+  const { keyword } = req.query;
+  if (typeof keyword === "string" && keyword.trim() !== "") {
+    remindController.search(req, res, next);
+  } else {
+    remindController.getAll(req, res, next);
+  }
+});
 
 router.get(
   "/get-vehicle-id/:id",
@@ -41,7 +52,6 @@ router.post(
 );
 
 // search
-router.get("/search", verifyToken, remindController.search);
 
 router.patch(
   "/update-notified-off/:id",
