@@ -86,13 +86,22 @@ router.put(
     verifyToken,
     remindController.update,
 );
+
+/**
+ * @swagger
+ * /items:
+ *   post:
+ *     summary: Retrieve a list of items
+ *     responses:
+ *       200:
+ *         description: A list of items.
+ */
 router.put(
     '/update-is-deleted/:id',
     [param('id', constants.VALIDATE_DATA).isNumeric()],
     verifyToken,
     remindController.updateIsDeleted,
 );
-
 // yes ==> call api current_kilometers = current_kilometers of result return from api, cumulative_kilometers = cumulative_kilometers of remind_id
 //         expiration_time = Date.now() + (Date.now() - expiration_time of remind_id)
 //         time_before = time_before of remind_id
@@ -107,7 +116,6 @@ router.put(
 //     verifyToken,
 //     remindController.finishRemind,
 // );
-
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);
 };
