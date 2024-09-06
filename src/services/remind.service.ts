@@ -16,7 +16,7 @@ class RemindService {
         }
     }
 
-    async getByVehicleId(vehicleId: number) {
+    async getByVehicleId(vehicleId: string) {
         try {
             const { conn } = await getConnection();
             try {
@@ -73,25 +73,29 @@ class RemindService {
             );
         }
     }
-async update(data: any, remindID: number) {
-    try {
-      const { conn } = await getConnection();
-      try {
-        const remind = await remindModel.updateRemind(conn, data, remindID);
-        return remind;
-      } catch (error) {
-        throw error;
-      } finally {
-        conn.release();
-      }
-    } catch (error: any) {
-      throw new BusinessLogicError(
-        "Đã xảy ra lỗi",
-        [error.msg as never],
-        error.status
-      );
+    async update(data: any, remindID: number) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const remind = await remindModel.updateRemind(
+                    conn,
+                    data,
+                    remindID,
+                );
+                return remind;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error: any) {
+            throw new BusinessLogicError(
+                'Đã xảy ra lỗi',
+                [error.msg as never],
+                error.status,
+            );
+        }
     }
-  }
     async updateNotifiedOn(remindID: number) {
         try {
             const { conn } = await getConnection();

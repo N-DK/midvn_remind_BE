@@ -13,9 +13,7 @@ class RemindController {
 
     getByVehicleId = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
-            const data = await remindService.getByVehicleId(
-                parseInt(req.params.id),
-            );
+            const data = await remindService.getByVehicleId(req.params.id);
             GET(res, data);
         },
     );

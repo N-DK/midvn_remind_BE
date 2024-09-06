@@ -51,14 +51,14 @@ const reminder = {
 
                     const remind = JSON.parse(r);
 
-                    await remindFeature.sendNotifyRemind(
-                        'http://localhost:3007',
-                        {
-                            name_remind: remind.note_repair + ' NDK',
-                            vehicle_name: remind.vehicles,
-                            user_id: remind.user_id,
-                        },
-                    );
+                    // await remindFeature.sendNotifyRemind(
+                    //     'http://localhost:3007',
+                    //     {
+                    //         name_remind: remind.note_repair + ' NDK',
+                    //         vehicle_name: remind.vehicles,
+                    //         user_id: remind.user_id,
+                    //     },
+                    // );
                 }
             } catch (error) {
                 console.log(error);
