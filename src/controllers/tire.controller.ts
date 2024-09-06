@@ -46,6 +46,13 @@ class TireController {
             UPDATE(res, tire);
         },
     );
+    search = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const dataBody = req.body;
+            const data = await tireService.search(dataBody);
+            GET(res, data);
+        }
+    )
 }
 
 export default new TireController();

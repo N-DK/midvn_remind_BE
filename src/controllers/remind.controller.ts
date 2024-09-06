@@ -62,6 +62,14 @@ class RemindController {
             GET(res, data);
         },
     );
+    updateIsDeleted = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const result = await remindService.updateIsDeleted(
+                parseInt(req.params.id),
+            );
+            UPDATE(res, result);
+        },
+    )
 }
 
 export default new RemindController();
