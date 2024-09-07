@@ -45,8 +45,9 @@ router.post(
         body('is_notified', constants.VALIDATE_DATA).isNumeric(),
         body('note_repair', constants.NOT_EMPTY).isString(),
         body('expiration_time', constants.VALIDATE_DATA).isNumeric(),
-        body('time_before', constants.VALIDATE_DATA).isNumeric(),
+        body('km_before', constants.VALIDATE_DATA).isNumeric(),
         body('vehicles', constants.VALIDATE_DATA).isArray(),
+        body('schedule', constants.VALIDATE_DATA).isArray()
     ],
     remindController.addRemind,
 );
@@ -92,7 +93,7 @@ router.put(
  * /items:
  *   post:
  *     summary: Retrieve a list of items
- *     responses:
+ *     responses: 
  *       200:
  *         description: A list of items.
  */

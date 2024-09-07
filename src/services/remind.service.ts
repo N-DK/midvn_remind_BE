@@ -44,11 +44,8 @@ class RemindService {
                 conn.release();
             }
         } catch (error: any) {
-            throw new BusinessLogicError(
-                'Đã xảy ra lỗi',
-                [error.msg as never],
-                error.status,
-            );
+            console.log(error);
+            throw error;
         }
     }
     async updateNotifiedOff(remindID: number) {
