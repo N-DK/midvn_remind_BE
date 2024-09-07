@@ -5,5 +5,5 @@ export const tables = {
     tableTire: 'tbl_tire',
     tableRemindVehicle: 'tbl_remind_vehicle',
     tableTokenFirebase: 'tbl_token_firebase',
-    tableRemindSchedule: 'tbl_remind_schedule',
+    tableScheduleRemind: 'tbl_remind_schedule',
 };
