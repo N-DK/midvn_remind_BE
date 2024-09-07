@@ -2,7 +2,8 @@ import { PoolConnection } from 'mysql2';
 import DatabaseModel from './database.model';
 import { tables } from '../constants/tableName.constant';
 import redisModel from './redis.model';
-
+import { remindFeature } from 'notify-services';
+import scheduleUtils from '../utils/schedule.util';
 const INFINITY = 2147483647;
 
 class RemindModel extends DatabaseModel {
@@ -122,7 +123,7 @@ class RemindModel extends DatabaseModel {
     }
 
     async addRemind(con: PoolConnection, data: any) {
-        const remind_id = await this.insert(con, tables.tableRemind, {
+        const payload = {
             img_url: data?.img_url ?? null,
             note_repair: data?.note_repair ?? null,
             history_repair: data?.history_repair ?? null,
@@ -135,7 +136,9 @@ class RemindModel extends DatabaseModel {
             is_received: data?.is_received ?? 0,
             remind_category_id: data.remind_category_id,
             create_time: Date.now(),
-        });
+        };
+
+        const remind_id = await this.insert(con, tables.tableRemind, payload);
 
         let queryText = `INSERT INTO ${tables.tableRemindVehicle} (remind_id, vehicle_id, tire_seri) VALUES `;
 
@@ -159,27 +162,51 @@ class RemindModel extends DatabaseModel {
 
         // save redis
         const isRedisReady = redisModel.redis.instanceConnect.isReady;
+
         if (isRedisReady) {
             await redisModel.hSet(
                 'remind',
                 remind_id,
                 JSON.stringify({
-                    img_url: data?.img_url ?? null,
-                    note_repair: data?.note_repair ?? null,
-                    history_repair: data?.history_repair ?? null,
-                    current_kilometers: data?.current_kilometers ?? 0,
-                    cumulative_kilometers: data?.cumulative_kilometers ?? 0,
-                    expiration_time: data?.expiration_time ?? 0,
-                    is_delete: 0,
-                    time_before: data?.time_before ?? INFINITY,
-                    is_notified: data?.is_notified ?? 0,
-                    is_received: data?.is_received ?? 0,
-                    remind_category_id: data.remind_category_id,
-                    vehicles: data?.vehicles,
-                    create_time: Date.now(),
+                    ...payload,
+                    remind_id,
+                    vehicles: data?.vehicles ?? [],
                 }),
                 'remind.models.ts',
                 Date.now(),
+            );
+        }
+
+        for (const schedule of data?.schedules) {
+            const res = await this.insert(con, tables.tableRemindSchedule, {
+                remind_id,
+                start: schedule.start,
+                end: schedule.end,
+                time: schedule.time,
+                // create_time: Date.now(),
+            });
+
+            scheduleUtils.createSchedule(
+                {
+                    start: new Date(schedule.start * 1000),
+                    end: new Date(schedule.end * 1000),
+                    time: schedule.time,
+                },
+                async () => {
+                    await remindFeature.sendNotifyRemind(
+                        'http://localhost:3007',
+                        {
+                            name_remind: payload.note_repair + ' NDK',
+                            vehicle_name: data.vehicles.join(', '),
+                            user_id: 5,
+                        },
+                    );
+                },
+                {
+                    ...payload,
+                    remind_id,
+                    vehicles: data?.vehicles ?? [],
+                },
             );
         }
 
@@ -300,22 +327,20 @@ class RemindModel extends DatabaseModel {
 
     async search(con: PoolConnection, userID: number, query: any) {
         let params: any[] = [userID];
-        let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND 
+        let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? ${
+            query.vehicle_id
+                ? `AND ${tables.tableVehicleNoGPS}.license_plate = ${query.vehicle_id}`
+                : ''
+        } AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND 
             (
                 note_repair LIKE '%${query.keyword}%' OR
                 cumulative_kilometers LIKE '%${query.keyword}%' OR
                 ${tables.tableRemindCategory}.name LIKE '%${query.keyword}%' OR
-                ${tables.tableVehicleNoGPS}.license_plate LIKE '%${query.keyword}%' OR 
+                ${tables.tableVehicleNoGPS}.license_plate LIKE '%${
+            query.keyword
+        }%' OR 
                 ${tables.tableVehicleNoGPS}.license LIKE '%${query.keyword}%'
             )`;
-        // if (query.license_plate) {
-        //     whereClause += ' AND license_plate LIKE ?';
-        //     params.push(`%${query.license_plate}%`);
-        // }
-        // if (query.license) {
-        //     whereClause += ' AND license LIKE ?';
-        //     params.push(`%${query.license}%`);
-        // }
 
         const result = await this.selectWithJoins(
             con,
@@ -346,7 +371,6 @@ class RemindModel extends DatabaseModel {
                ${tables.tableRemindCategory}.create_time AS category_create_time,
                ${tables.tableRemindCategory}.update_time AS category_update_time,
                ${tables.tableRemindCategory}.is_deleted AS category_is_deleted`,
-
             whereClause,
             params,
             [
@@ -370,6 +394,7 @@ class RemindModel extends DatabaseModel {
 
         return result;
     }
+
     async updateIsDeleted(con: PoolConnection, remindID: number) {
         const result = await this.update(
             con,

@@ -1,11 +1,12 @@
 import { PoolConnection } from 'mysql2';
-import cron from 'node-cron';
+import cron, { schedule } from 'node-cron';
 import DatabaseModel from '../models/database.model';
 import { remindFeature } from 'notify-services';
 import { getConnection } from '../dbs/init.mysql';
 import GPSApi from '../api/GPS.api';
 import { tables } from '../constants/tableName.constant';
 import redisModel from '../models/redis.model';
+import scheduleUtls from './schedule.util';
 
 const dataBaseModel = new DatabaseModel();
 
@@ -18,56 +19,72 @@ const reminder = {
     },
 
     start: async () => {
-        cron.schedule('* * * * *', async () => {
-            // Mỗi phút kiểm tra
-            try {
-                console.log('Đang kiểm tra nhắc nhở');
-                const isRedisReady = redisModel.redis.instanceConnect.isReady;
-
-                const now = Date.now(); // Lấy thời gian hiện tại
-                // const gps = (await GPSApi.getGPSData())?.data; // Lấy dữ liệu GPS
-                const gps: any = {};
-                let reminds = [];
-
-                if (isRedisReady) {
-                    // get all remind from redis
-                    const { data } = await redisModel.hGetAll(
-                        'remind',
-                        'remind.model.ts',
-                        Date.now(),
-                    );
-                    reminds = Object.values(data);
-                } else {
-                    const whereClause = `is_received = 0 AND is_notified = 0 AND (expiration_time - ? <= time_before)`;
-                    const results: any = await dataBaseModel.select(
-                        connection,
-                        tables.tableRemind,
-                        '*',
-                        whereClause,
-                        gps?.total_distance
-                            ? [now, gps?.total_distance]
-                            : [now],
-                    );
-                    reminds = results;
-                }
-
-                for (const r of reminds) {
-                    // select vehicle by remind id from tbl_remind_vehicle
-                    const remind = JSON.parse(r);
-
-                    // await remindFeature.sendNotifyRemind(
-                    //     'http://localhost:3007',
-                    //     {
-                    //         name_remind: remind.note_repair + ' NDK',
-                    //         vehicle_name: remind.vehicles,
-                    //         user_id: remind.user_id,
-                    //     },
-                    // );
-                }
-            } catch (error) {
-                console.log(error);
-            }
-        });
+        // TEST
+        // cron.schedule('* * * * *', async () => {
+        //     // Mỗi phút kiểm tra
+        //     try {
+        //         console.log('Đang kiểm tra nhắc nhở');
+        //         scheduleUtls.createSchedule(
+        //             {
+        //                 start: new Date('2024-7-09'),
+        //                 end: new Date('2024-7-9'),
+        //                 time: '11:28',
+        //             },
+        //             async () => {
+        //                 // Mỗi ngày 0h kiểm tra
+        //                 console.log('Đang kiểm tra nhắc nhở hàng ngày');
+        //                 await remindFeature.sendNotifyRemind(
+        //                     'http://localhost:3007',
+        //                     {
+        //                         name_remind: ' NDK',
+        //                         vehicle_name: '123',
+        //                         user_id: 5,
+        //                     },
+        //                 );
+        //             },
+        //         );
+        //         const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        //         const now = Date.now(); // Lấy thời gian hiện tại
+        //         // const gps = (await GPSApi.getGPSData())?.data; // Lấy dữ liệu GPS
+        //         const gps: any = {};
+        //         let reminds = [];
+        //         if (isRedisReady) {
+        //             // get all remind from redis
+        //             const { data } = await redisModel.hGetAll(
+        //                 'remind',
+        //                 'remind.model.ts',
+        //                 Date.now(),
+        //             );
+        //             reminds = Object.values(data);
+        //         } else {
+        //             const whereClause = `is_received = 0  AND is_notified = 0 AND (expiration_time - ? <= time_before)`;
+        //             const results: any = await dataBaseModel.select(
+        //                 connection,
+        //                 tables.tableRemind,
+        //                 '*',
+        //                 whereClause,
+        //                 gps?.total_distance
+        //                     ? [now, gps?.total_distance]
+        //                     : [now],
+        //             );
+        //             reminds = results;
+        //         }
+        //         for (const r of reminds) {
+        //             // select vehicle by remind id from tbl_remind_vehicle
+        //             const remind = JSON.parse(r);
+        //             // await remindFeature.sendNotifyRemind(
+        //             //     'http://localhost:3007',
+        //             //     {
+        //             //         name_remind: remind.note_repair + ' NDK',
+        //             //         vehicle_name: remind.vehicles,
+        //             //         user_id: remind.user_id,
+        //             //     },
+        //             // );
+        //         }
+        //     } catch (error) {
+        //         console.log(error);
+        //     }
+        // });
     },
 
     remindExpirationTime: () => {
