@@ -298,7 +298,7 @@ class DatabaseModel {
 
             const query = `SELECT ${fields} FROM ${mainTable} ${joinClauses} WHERE ${where}`;
 
-            console.log(query);
+            // console.log(query);
 
             db.query(
                 query,
