@@ -1,8 +1,9 @@
-import { PoolConnection } from "mysql2";
-import DatabaseModel from "./database.model";
-import { tables } from "../constants/tableName.constant";
-import redisModel from "./redis.model";
-
+import { PoolConnection } from 'mysql2';
+import DatabaseModel from './database.model';
+import { tables } from '../constants/tableName.constant';
+import redisModel from './redis.model';
+import { remindFeature } from 'notify-services';
+import scheduleUtils from '../utils/schedule.util';
 const INFINITY = 2147483647;
 
 class RemindModel extends DatabaseModel {
@@ -98,76 +99,156 @@ class RemindModel extends DatabaseModel {
                  ${tables.tableRemindCategory}.update_time AS category_update_time,
                  ${tables.tableRemindCategory}.is_deleted AS category_is_deleted`,
 
-      `${tables.tableVehicleNoGPS}.license_plate = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0`,
-      [vehicleID],
-      [
-        {
-          table: tables.tableRemindVehicle,
-          on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-          type: "LEFT",
-        },
-        {
-          table: tables.tableRemind,
-          on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
-          type: "LEFT",
-        },
-        {
-          table: tables.tableRemindCategory,
-          on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
-          type: "LEFT",
-        },
-      ]
-    );
-    return result;
-  }
+            `${tables.tableVehicleNoGPS}.license_plate = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0`,
+            [vehicleID],
+            [
+                {
+                    table: tables.tableRemindVehicle,
+                    on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
+                    type: 'LEFT',
+                },
+            ],
+        );
+        return result;
+    }
 
-  async addRemind(con: PoolConnection, data: any) {
-    const remind_id = await this.insert(con, tables.tableRemind, {
-      img_url: data?.img_url ?? null,
-      note_repair: data?.note_repair ?? null,
-      history_repair: data?.history_repair ?? null,
-      current_kilometers: data?.current_kilometers ?? 0,
-      cumulative_kilometers: data?.cumulative_kilometers ?? 0,
-      expiration_time: data?.time_expire ?? 0,
-      is_deleted: 0,
-      time_before: data?.time_before ?? INFINITY,
-      is_notified: data?.is_notified ?? 0,
-      is_received: data?.is_received ?? 0,
-      remind_category_id: data.remind_category_id,
-      create_time: Date.now(),
-    });
+    async addRemind(con: PoolConnection, data: any) {
+        const payload = {
+            img_url: data?.img_url ?? null,
+            note_repair: data?.note_repair ?? null,
+            history_repair: data?.history_repair ?? null,
+            current_kilometers: data?.current_kilometers ?? 0,
+            cumulative_kilometers: data?.cumulative_kilometers ?? 0,
+            expiration_time: data?.time_expire ?? 0,
+            is_deleted: 0,
+            time_before: data?.time_before ?? INFINITY,
+            is_notified: data?.is_notified ?? 0,
+            is_received: data?.is_received ?? 0,
+            remind_category_id: data.remind_category_id,
+            create_time: Date.now(),
+        };
 
-    let queryText = `INSERT INTO ${tables.tableRemindVehicle} (remind_id, vehicle_id, tire_seri) VALUES `;
-    data?.vehicles?.forEach((item: any) => {
-      queryText += `(${remind_id}, '${item}', ${data?.tire_seri ?? null}),`;
-    });
+        const remind_id = await this.insert(con, tables.tableRemind, payload);
 
-    queryText = queryText.slice(0, -1);
+        let queryText = `INSERT INTO ${tables.tableRemindVehicle} (remind_id, vehicle_id, tire_seri) VALUES `;
 
-    const result = await new Promise((resolve, reject) => {
-      con.query(queryText, (err: any, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
+        data?.vehicles?.forEach((item: any) => {
+            queryText += `(${remind_id}, '${item}', '${
+                data?.tire_seri ?? null
+            }'),`;
+        });
+
+        queryText = queryText.slice(0, -1);
+
+        const result = await new Promise((resolve, reject) => {
+            con.query(queryText, (err: any, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+
+        // save redis
+        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+
+        if (isRedisReady) {
+            await redisModel.hSet(
+                'remind',
+                remind_id,
+                JSON.stringify({
+                    ...payload,
+                    remind_id,
+                    vehicles: data?.vehicles ?? [],
+                }),
+                'remind.models.ts',
+                Date.now(),
+            );
         }
-      });
-    });
 
-    //insert schedule
+        for (const schedule of data?.schedules) {
+            const res = await this.insert(con, tables.tableRemindSchedule, {
+                remind_id,
+                start: schedule.start,
+                end: schedule.end,
+                time: schedule.time,
+                // create_time: Date.now(),
+            });
 
-    let scheduleQuery = `INSERT INTO ${tables.tableScheduleRemind} (remind_id, schedule) VALUES `;
-    data?.schedule?.forEach((schedule: any) => {
-      scheduleQuery += `(${remind_id}, ${schedule}),`;
-    });
-    scheduleQuery = scheduleQuery.slice(0, -1); // Remove last comma
+            scheduleUtils.createSchedule(
+                {
+                    start: new Date(schedule.start * 1000),
+                    end: new Date(schedule.end * 1000),
+                    time: schedule.time,
+                },
+                async () => {
+                    await remindFeature.sendNotifyRemind(
+                        'http://localhost:3007',
+                        {
+                            name_remind: payload.note_repair + ' NDK',
+                            vehicle_name: data.vehicles.join(', '),
+                            user_id: 5,
+                        },
+                    );
+                },
+                {
+                    ...payload,
+                    remind_id,
+                    vehicles: data?.vehicles ?? [],
+                },
+            );
+        }
 
-    await new Promise((resolve, reject) => {
-      con.query(scheduleQuery, (err: any, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
+        return result;
+    }
+
+    async updateNotifiedOff(con: PoolConnection, remindID: number) {
+        const result = await this.update(
+            con,
+            tables.tableRemind,
+            { is_notified: 1 },
+            'id',
+            remindID,
+        );
+
+        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+
+        const { data } = await redisModel.hGetAll(
+            'remind',
+            'remind.model.ts',
+            Date.now(),
+        );
+        const reminds: any = isRedisReady ? Object.values(data) : result;
+
+        if (isRedisReady) {
+            const remindIndex = reminds.findIndex(
+                (remind: any) => remind.id === remindID,
+            );
+
+            if (remindIndex !== -1) {
+                let remind = JSON.parse(reminds[remindIndex]);
+                remind.is_notified = 1;
+                await redisModel.hSet(
+                    'remind',
+                    remindID,
+                    JSON.stringify(remind),
+                    'remind.models.ts',
+                    Date.now(),
+                );
+            } else {
+                console.log(`Remind with ID ${remindID} not found in Redis`);
+            }
         }
       });
     });
@@ -314,29 +395,26 @@ class RemindModel extends DatabaseModel {
     return result;
   }
 
-  async search(con: PoolConnection, userID: number, query: any) {
-    let params: any[] = [userID];
-    let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND 
+    async search(con: PoolConnection, userID: number, query: any) {
+        let params: any[] = [userID];
+        let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? ${
+            query.vehicle_id
+                ? `AND ${tables.tableVehicleNoGPS}.license_plate = ${query.vehicle_id}`
+                : ''
+        } AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND 
             (
                 note_repair LIKE '%${query.keyword}%' OR
                 cumulative_kilometers LIKE '%${query.keyword}%' OR
                 ${tables.tableRemindCategory}.name LIKE '%${query.keyword}%' OR
-                ${tables.tableVehicleNoGPS}.license_plate LIKE '%${query.keyword}%' OR 
+                ${tables.tableVehicleNoGPS}.license_plate LIKE '%${
+            query.keyword
+        }%' OR 
                 ${tables.tableVehicleNoGPS}.license LIKE '%${query.keyword}%'
             )`;
-    // if (query.license_plate) {
-    //     whereClause += ' AND license_plate LIKE ?';
-    //     params.push(`%${query.license_plate}%`);
-    // }
-    // if (query.license) {
-    //     whereClause += ' AND license LIKE ?';
-    //     params.push(`%${query.license}%`);
-    // }
-
-    const result = await this.selectWithJoins(
-      con,
-      tables.tableVehicleNoGPS,
-      `${tables.tableVehicleNoGPS}.license_plate AS license_plate,
+        const result = await this.selectWithJoins(
+            con,
+            tables.tableVehicleNoGPS,
+            `${tables.tableVehicleNoGPS}.license_plate AS license_plate,
                ${tables.tableVehicleNoGPS}.user_id AS user_id,
                ${tables.tableVehicleNoGPS}.license AS license,
                ${tables.tableVehicleNoGPS}.create_time AS vehicle_create_time,
@@ -362,60 +440,37 @@ class RemindModel extends DatabaseModel {
                ${tables.tableRemindCategory}.create_time AS category_create_time,
                ${tables.tableRemindCategory}.update_time AS category_update_time,
                ${tables.tableRemindCategory}.is_deleted AS category_is_deleted`,
+            whereClause,
+            params,
+            [
+                {
+                    table: tables.tableRemindVehicle,
+                    on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
+                    type: 'LEFT',
+                },
+            ],
+        );
 
-      whereClause,
-      params,
-      [
-        {
-          table: tables.tableRemindVehicle,
-          on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-          type: "LEFT",
-        },
-        {
-          table: tables.tableRemind,
-          on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
-          type: "LEFT",
-        },
-        {
-          table: tables.tableRemindCategory,
-          on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
-          type: "LEFT",
-        },
-      ]
-    );
+        return result;
+    }
 
-    return result;
-  }
-  async updateIsDeleted(con: PoolConnection, remindID: number) {
-    const result = await this.update(
-      con,
-      tables.tableRemind,
-      { is_deleted: 1 },
-      "id",
-      remindID
-    );
-    const isRedisReady = redisModel.redis.instanceConnect.isReady;
-
-    const { data } = await redisModel.hGetAll(
-      "remind",
-      "remind.model.ts",
-      Date.now()
-    );
-    const reminds: any = isRedisReady ? Object.values(data) : result;
-    if (isRedisReady) {
-      const remindIndex = reminds.findIndex(
-        (remind: any) => remind.id === remindID
-      );
-
-      if (remindIndex !== -1) {
-        let remind = JSON.parse(reminds[remindIndex]);
-        remind.is_deleted = 1;
-        await redisModel.hSet(
-          "remind",
-          remindID,
-          JSON.stringify(remind),
-          "remind.models.ts",
-          Date.now()
+    async updateIsDeleted(con: PoolConnection, remindID: number) {
+        const result = await this.update(
+            con,
+            tables.tableRemind,
+            { is_deleted: 1 },
+            'id',
+            remindID,
         );
       } else {
         console.log(`Remind with ID ${remindID} not found in Redis`);
