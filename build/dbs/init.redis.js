@@ -12,7 +12,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const redis_1 = __importDefault(require("redis"));
+exports.closeRedis = exports.getRedis = exports.initRedis = void 0;
+const redis_1 = require("redis");
 const redis_config_1 = __importDefault(require("../config/redis.config"));
 let client = {}, statusConnectRedis = {
     CONNECT: 'connect',
@@ -44,7 +45,7 @@ class Redis {
     init() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const instanceRedis = yield redis_1.default.createClient(Object.assign(Object.assign({}, redis_config_1.default), { socket: {
+                const instanceRedis = (0, redis_1.createClient)(Object.assign(Object.assign({}, redis_config_1.default), { socket: {
                         reconnectStrategy: function (retries) {
                             return Math.min(retries * 500, 10000);
                         },
@@ -53,7 +54,7 @@ class Redis {
                 handleEventConnection(instanceRedis);
             }
             catch (error) {
-                console.log({ error: JSON.stringify(error, null, 2) });
+                console.log({ error });
             }
         });
     }
@@ -72,4 +73,6 @@ class Redis {
     }
 }
 const { init, get, close } = new Redis();
-exports.default = { initRedis: init, getRedis: get, closeRedis: close };
+exports.initRedis = init;
+exports.getRedis = get;
+exports.closeRedis = close;

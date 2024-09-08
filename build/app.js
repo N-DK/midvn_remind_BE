@@ -10,6 +10,8 @@ const path_1 = __importDefault(require("path"));
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const app = (0, express_1.default)();
+// const filesDirectory = path.join(__dirname, 'files');
+// app.use('/files', express.static(filesDirectory));
 app.use((0, morgan_1.default)('dev'));
 app.use((0, helmet_1.default)());
 app.use(helmet_1.default.frameguard({
@@ -32,25 +34,28 @@ app.use(bodyParser.urlencoded({ limit: '10kb', extended: true }));
 //init db
 const init_mysql_1 = require("./dbs/init.mysql");
 (0, init_mysql_1.initDB)();
-//init redis
-// const { initRedis } = require('./dbs/init.redis');
-// initRedis();
+// init redis
+const init_redis_1 = require("./dbs/init.redis");
+(0, init_redis_1.initRedis)();
 //init mqtt client
-// const { initMqtt } = require('./config/mqtt.config');
-// initMqtt();
+const mqtt_config_1 = require("./config/mqtt.config");
+(0, mqtt_config_1.initMqtt)();
+// remind
+const reminder_util_1 = __importDefault(require("./utils/reminder.util"));
+reminder_util_1.default.init();
+reminder_util_1.default.start();
 // import routes
 const routes_1 = __importDefault(require("./routes"));
 (0, routes_1.default)(app);
-//midleware handle error
-// const {
-//     is404Handler,
-//     logErrorMiddleware,
-//     returnError,
-// } = require('./middlewares/handleErrors.middleware');
-// app.use(is404Handler);
-// app.use(logErrorMiddleware);
-// app.use(returnError);
+// import swagger
+const swagger_1 = __importDefault(require("./swagger"));
+(0, swagger_1.default)(app);
+//middlewares handle error
+const handleErrors_middleware_1 = require("./middlewares/handleErrors.middleware");
+app.use(handleErrors_middleware_1.is404Handler);
+app.use(handleErrors_middleware_1.logErrorMiddleware);
+app.use(handleErrors_middleware_1.returnError);
 //init cron job
-// const tasks = require("./tasks/issure.task");
-// tasks.checkOverload().start();
+const issue_task_1 = __importDefault(require("./tasks/issue.task"));
+issue_task_1.default.checkOverload().start();
 exports.default = app;

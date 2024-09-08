@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = {
-    initialNameOfTableReportChargingStation: 'tbl_report_region_charging_station',
+exports.setting = void 0;
+exports.setting = {
+    initialNameOfTableReportChargingStation: 'tbl_report_tollboth_charging_station',
 };
