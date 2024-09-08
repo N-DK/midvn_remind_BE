@@ -135,7 +135,8 @@ class RemindModel extends DatabaseModel {
                 km_before: data?.km_before ?? INFINITY,
                 is_notified: data?.is_notified ?? 0,
                 is_received: data?.is_received ?? 0,
-                remind_category_id: data.remind_category_id,
+                remind_category_id: data?.remind_category_id,
+                cycle: data?.cycle ?? 0,
                 create_time: Date.now(),
             };
 
@@ -154,7 +155,8 @@ class RemindModel extends DatabaseModel {
 
             const remind = {
                 ...payload,
-                remind_id,
+                schedules: data?.schedules ?? [],
+                id: remind_id,
                 vehicles: data?.vehicles ?? [],
             };
 
@@ -166,26 +168,7 @@ class RemindModel extends DatabaseModel {
                 await this.handleSchedule(schedule, remind, data?.vehicles);
             }
 
-            const values = data?.schedules
-                ?.map(
-                    (schedule: any) =>
-                        `(${remind_id}, ${schedule.start}, ${schedule.end}, '${
-                            schedule.time
-                        }', ${Date.now()})`,
-                )
-                .join(',');
-
-            const queryText = `INSERT INTO ${tables.tableRemindSchedule} (remind_id, start, end, time, create_time) VALUES ${values}`;
-
-            await new Promise((resolve, reject) => {
-                con.query(queryText, (err: any, result) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(result);
-                    }
-                });
-            });
+            await this.insertRemindSchedule(con, remind_id, data);
 
             return result;
         } catch (error) {
@@ -343,36 +326,107 @@ class RemindModel extends DatabaseModel {
         return result;
     }
 
+    async insertRemindSchedule(
+        con: PoolConnection,
+        remindID: number,
+        data: any,
+    ) {
+        const values = data?.schedules
+            ?.map(
+                (schedule: any) =>
+                    `(${remindID}, ${schedule.start}, ${schedule.end}, '${
+                        schedule.time
+                    }', ${Date.now()})`,
+            )
+            .join(',');
+
+        const queryText = `INSERT INTO ${tables.tableRemindSchedule} (remind_id, start, end, time, create_time) VALUES ${values}`;
+
+        await new Promise((resolve, reject) => {
+            con.query(queryText, (err: any, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+    }
+
     async updateRemind(con: PoolConnection, data: any, remindID: number) {
-        const result = await this.update(
+        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const result: any = await this.select(
             con,
             tables.tableRemind,
-            {
-                img_url: data?.img_url ?? null,
-                note_repair: data?.note_repair ?? null,
-                history_repair: data?.history_repair ?? null,
-                current_kilometers: data?.current_kilometers ?? 0,
-                cumulative_kilometers: data?.cumulative_kilometers ?? 0,
-                expiration_time: data?.time_expire ?? 0,
-                time_before: data?.time_before ?? INFINITY,
-                is_notified: data?.is_notified ?? 0,
-                is_received: data?.is_notified ?? 0,
-                update_time: Date.now(),
-            },
+            '*',
+            'id = ?',
+            [remindID],
+        );
+        const remindOld = result[0];
+        const payload = {
+            img_url: data?.img_url ?? remindOld.img_url,
+            note_repair: data?.note_repair ?? remindOld.note_repair,
+            history_repair: data?.history_repair ?? remindOld.history_repair,
+            current_kilometers:
+                data?.current_kilometers ?? remindOld.current_kilometers,
+            cumulative_kilometers:
+                data?.cumulative_kilometers ?? remindOld.cumulative_kilometers,
+            expiration_time: data?.expiration_time ?? remindOld.expiration_time,
+            is_deleted: remindOld.is_deleted,
+            km_before: data?.km_before ?? remindOld.km_before,
+            is_notified: data?.is_notified ?? remindOld.is_notified,
+            is_received: data?.is_received ?? remindOld.is_received,
+            remind_category_id:
+                data?.remind_category_id ?? remindOld.remind_category_id,
+            cycle: data?.cycle ?? remindOld.cycle,
+            update_time: Date.now(),
+        };
+        const remind = {
+            ...payload,
+            schedules: data?.schedules ?? [],
+            id: remindID,
+            vehicles: data?.vehicles ?? [],
+        };
+
+        const results: any = await this.update(
+            con,
+            tables.tableRemind,
+            payload,
             'id',
             remindID,
         );
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+
+        if (data?.schedules) {
+            await this.delete(
+                con,
+                tables.tableRemindSchedule,
+                `remind_id = ${remindID}`,
+            );
+            await this.insertRemindSchedule(con, remindID, data);
+            scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
+            for (const schedule of data?.schedules) {
+                await this.handleSchedule(
+                    schedule,
+                    remind,
+                    await scheduleUtils.getVehiclesByRemindId(remindID),
+                );
+            }
+        }
+        if (data?.expiration_time) {
+            scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
+            await this.scheduleCronJobForExpiration(remind);
+        }
+
         if (isRedisReady) {
             await redisModel.hSet(
                 'remind',
                 remindID,
-                JSON.stringify(result),
+                JSON.stringify(remind),
                 'remind.models.ts',
                 Date.now(),
             );
         }
-        return result;
+        return results;
     }
 
     async search(con: PoolConnection, userID: number, query: any) {

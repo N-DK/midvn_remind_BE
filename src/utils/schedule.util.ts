@@ -1,4 +1,4 @@
-import cron from 'node-cron';
+import cron, { schedule, ScheduledTask } from 'node-cron';
 import { isBefore, isAfter, startOfDay } from 'date-fns';
 import redisModel from '../models/redis.model';
 import { remindFeature } from 'notify-services';
@@ -6,16 +6,20 @@ import DatabaseModel from '../models/database.model';
 import { getConnection } from '../dbs/init.mysql';
 import { tables } from '../constants/tableName.constant';
 import { PoolConnection } from 'mysql2';
+import remindModel from '../models/remind.model';
 
-let schedules: {
-    remind: any;
-    schedule: { start: Date; end: Date; time: string };
-}[] = [];
+// let schedules: {
+//     remind: any;
+//     schedule: { start: Date; end: Date; time: string };
+// }[] = [];
+
+let reminds: any[] = [];
+const cronJobs = new Map<string, ScheduledTask>();
 
 class ScheduleUtils {
-    // private isRedisReady: boolean;
     private databaseModel: DatabaseModel;
     private conn: PoolConnection;
+    private readonly UNIT_MONTH = 30 * 24 * 60 * 60;
 
     constructor() {
         this.databaseModel = new DatabaseModel();
@@ -37,11 +41,13 @@ class ScheduleUtils {
     private async restoreCronJobsForExpired() {
         const reminds: any = await this.loadReminds();
 
+        console.log('remind ', reminds);
+
         if (!reminds?.length) return;
 
         for (const remind of reminds) {
             const expirationTime = new Date(
-                remind.expiration_time * 1000, // + 86400000 // 1 day
+                remind.expiration_time * 1000 + 86400000, // + 86400000 // 1 day
             );
 
             console.log('expirationTime', expirationTime);
@@ -50,6 +56,7 @@ class ScheduleUtils {
                 expirationTime,
                 remind,
             );
+
             cronJob.start();
         }
     }
@@ -57,31 +64,39 @@ class ScheduleUtils {
     public async createCronJobForExpired(expirationTime: Date, remind: any) {
         const month = expirationTime.getMonth() + 1;
         const day = expirationTime.getDate();
-        const { remind_id, vehicles, id, ...other } = remind;
+        const { remind_id, id, ...other } = remind;
+        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+
+        // if (isRedisReady) {
+        //     const { data } = await this.getRemindFromRedis();
+
+        //     schedules = Object.values(data).filter((item: any) => {
+        //         item = JSON.parse(item);
+
+        //         return item.remind_id === remind.remind_id;
+        //     });
+        // }
 
         console.log('other', other);
+        console.log('schedule', remind.schedules);
 
-        console.table({ remind: remind.remind_id, month, day });
+        console.table({ remind: remind.id, month, day });
 
         const cronJob = cron.schedule(
-            `* * ${day} ${month} *`, // */20 8-20
+            `*/20 8-20 ${day} ${month} *`, // */20 8-20
             async () => {
                 try {
-                    await this.databaseModel.update(
-                        this.conn,
-                        tables.tableRemind,
-                        { is_notified: 1 }, // Đánh dấu đã thông báo
-                        'id',
-                        remind.id,
-                    );
-                    await this.databaseModel.insert(
-                        this.conn,
-                        tables.tableRemind,
-                        {
-                            ...other,
-                            expiration_time: Date.now(),
-                        },
-                    );
+                    await remindModel.addRemind(this.conn, {
+                        ...other,
+                        expiration_time:
+                            Math.ceil(Date.now() / 1000) *
+                            (remind.cycle * this.UNIT_MONTH),
+                        schedules: remind.schedules.map((s: any) => ({
+                            ...s,
+                            start: s.start + remind.cycle * this.UNIT_MONTH,
+                            end: s.end + remind.cycle * this.UNIT_MONTH,
+                        })),
+                    });
                     await remindFeature.sendNotifyRemind(
                         'http://localhost:3007',
                         {
@@ -98,25 +113,95 @@ class ScheduleUtils {
                     );
                 } finally {
                     cronJob.stop();
+                    if (isRedisReady) {
+                        const { data } = await this.getRemindFromRedis();
+
+                        const key = Object.keys(data).find((key: any) => {
+                            data[key].remind.remind_id === remind.remind_id;
+                        });
+                        console.log('key', key);
+                        // await redisModel.hDel(
+                        //     'remind',
+                        //     key,
+                        //     'schedule.utils.ts',
+                        //     Date.now(),
+                        // );
+                    } else {
+                        await this.databaseModel.update(
+                            this.conn,
+                            tables.tableRemind,
+                            { is_notified: 1, update_time: Date.now() }, // Đánh dấu đã thông báo
+                            'id',
+                            remind.id,
+                        );
+                    }
                 }
             },
+            { name: `${id}-${expirationTime}-expire` },
         );
-
+        cronJobs.set(`${id}-${expirationTime}-expire`, cronJob);
         return cronJob;
     }
 
     private restoreCronJobs() {
-        if (!schedules?.length) return;
+        if (!reminds?.length) return;
 
-        for (const { remind, schedule } of schedules) {
-            const cronJob = this.createCronJob(schedule, remind, async () => {
-                await remindFeature.sendNotifyRemind('http://localhost:3007', {
-                    name_remind: remind.note_repair + ' NDK',
-                    vehicle_name: remind.vehicles.join(', '),
-                    user_id: 5,
-                });
-            });
-            cronJob.start();
+        for (const remind of reminds) {
+            for (const schedule of remind.schedules) {
+                const cronJob = this.createCronJob(
+                    {
+                        start: new Date(schedule.start * 1000),
+                        end: new Date(schedule.end * 1000),
+                        time: schedule.time,
+                    },
+                    remind,
+                    async () => {
+                        await remindFeature.sendNotifyRemind(
+                            'http://localhost:3007',
+                            {
+                                name_remind: remind.note_repair + ' NDK',
+                                vehicle_name: remind.vehicles.join(', '),
+                                user_id: 5,
+                            },
+                        );
+                    },
+                );
+
+                cronJob.start();
+            }
+        }
+    }
+
+    private async getRemindFromRedis() {
+        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+
+        if (isRedisReady) {
+            const results = await redisModel.hGetAll(
+                'remind',
+                'remind.model.ts',
+                Date.now(),
+            );
+
+            return results;
+        } else {
+            return { data: [], result: true };
+        }
+    }
+
+    private async getRemindFromRedisById(remind_id: any) {
+        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+
+        if (isRedisReady) {
+            const results = await redisModel.hGet(
+                'remind',
+                remind_id,
+                'remind.model.ts',
+                Date.now(),
+            );
+
+            return results;
+        } else {
+            return { data: [], result: true };
         }
     }
 
@@ -124,28 +209,16 @@ class ScheduleUtils {
         try {
             const isRedisReady = redisModel.redis.instanceConnect.isReady;
             if (!isRedisReady) {
-                const results: any = await this.databaseModel.select(
-                    this.conn,
-                    tables.tableRemind,
-                    '*',
-                    'is_received = 0 AND is_notified = 0',
-                    [],
-                );
-
-                return await Promise.all(
-                    results.map(async (item: any) => {
-                        item.remind_id = item.id;
-
-                        return (await this.buildSchedule(item, this.conn))
-                            .remind;
-                    }),
+                const results = await this.getReminds();
+                return results.filter(
+                    (item) =>
+                        !isBefore(
+                            new Date(item.expiration_time * 1000),
+                            startOfDay(new Date()),
+                        ),
                 );
             } else {
-                const { data } = await redisModel.hGetAll(
-                    'remind',
-                    'remind.model.ts',
-                    Date.now(),
-                );
+                const { data } = await this.getRemindFromRedis();
 
                 return Object.values(data)
                     .filter((item: any) => {
@@ -154,6 +227,7 @@ class ScheduleUtils {
                         return (
                             item.is_received === 0 &&
                             item.is_notified === 0 &&
+                            item.is_deleted === 0 &&
                             !isBefore(
                                 new Date(item.expiration_time * 1000),
                                 startOfDay(new Date()),
@@ -168,51 +242,75 @@ class ScheduleUtils {
         }
     }
 
+    private async getReminds() {
+        const results: any = await this.databaseModel.select(
+            this.conn,
+            tables.tableRemind,
+            '*',
+            'is_notified = 0 AND is_deleted = 0 AND is_received = 0',
+            [],
+        );
+
+        const reminds = await Promise.all(
+            results.map(async (item: any) => {
+                const schedules = await this.buildSchedule();
+                const vehicles = await this.getVehiclesByRemindId(item.id);
+                return {
+                    ...item,
+                    schedules,
+                    vehicles,
+                };
+            }),
+        );
+        return reminds;
+    }
+
     private async loadSchedules() {
         try {
             const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
             if (!isRedisReady) {
-                const result: any = await this.databaseModel.selectWithJoins(
-                    this.conn,
-                    tables.tableRemindSchedule,
-                    '*',
-                    'remind_id IS NOT NULL',
-                    [],
-                    [
-                        {
-                            table: tables.tableRemind,
-                            on: `${tables.tableRemindSchedule}.remind_id = ${tables.tableRemind}.id`,
-                            type: 'LEFT',
-                        },
-                    ],
-                );
-
-                schedules = await Promise.all(
-                    result.map(async (item: any) =>
-                        this.buildSchedule(item, this.conn),
-                    ),
-                );
+                reminds = await this.getReminds();
             } else {
-                const result = await redisModel.get(
-                    'schedules',
-                    'schedule.util.ts',
-                    Date.now(),
-                );
+                const result = await this.getRemindFromRedis();
 
-                schedules = JSON.parse(result?.data) ?? [];
+                reminds =
+                    Object.values(result?.data).map((item: any) =>
+                        JSON.parse(item),
+                    ) ?? [];
             }
         } catch (error) {
             console.error('Error loading schedules:', error);
         }
     }
+    // const remind = reminds.find((item) => item.id === remind_id);
+    // return remind?.schedules.some(
+    //     (schedule: any) => job.getStatus() === `*/${schedule.time} * * * *`, // Thay thế cho job.cron?.source
+    // );
 
-    private async buildSchedule(item: any, conn: any) {
+    public async destroyAllCronJobByRemindId(remind_id: any, type: string) {
+        cronJobs.forEach((job, key) => {
+            if (key.includes(remind_id) && key.includes(type)) {
+                console.log('key', key, 'job', job);
+
+                // job.stop();
+                // cronJobs.delete(key);
+            }
+        });
+
+        // const cronJobs = Array.from(cron.getTasks()).filter(([_, job]) => {
+        //     console.log('job', job);
+        // });
+
+        // cronJobs.forEach(([_, job]: [string, ScheduledTask]) => job.stop());
+    }
+
+    public async getVehiclesByRemindId(remind_id: any) {
         const vehicles: any = await this.databaseModel.selectWithJoins(
-            conn,
+            this.conn,
             tables.tableVehicleNoGPS,
             '*',
-            `remind_id = ${item.remind_id}`,
+            `remind_id = ${remind_id}`,
             [],
             [
                 {
@@ -228,17 +326,45 @@ class ScheduleUtils {
             ],
         );
 
-        return {
-            remind: {
-                ...item,
-                vehicles: vehicles.map((v: any) => v.license_plate),
-            },
-            schedule: {
-                start: new Date(item.start * 1000),
-                end: new Date(item.end * 1000),
-                time: item.time,
-            },
-        };
+        return vehicles.map((v: any) => v.license_plate);
+    }
+
+    private async buildSchedule() {
+        const result: any = await this.databaseModel.selectWithJoins(
+            this.conn,
+            tables.tableRemindSchedule,
+            '*',
+            'remind_id IS NOT NULL',
+            [],
+            [
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemindSchedule}.remind_id = ${tables.tableRemind}.id`,
+                    type: 'LEFT',
+                },
+            ],
+        );
+
+        const groupedData = result
+            .filter(
+                (item: any) =>
+                    item.is_notified === 0 &&
+                    item.is_deleted === 0 &&
+                    item.is_received === 0,
+            )
+            .reduce((acc: any, item: any) => {
+                if (!acc[item.remind_id]) {
+                    acc[item.remind_id] = [];
+                }
+                acc[item.remind_id].push({
+                    start: item.start,
+                    end: item.end,
+                    time: item.time,
+                });
+                return acc;
+            }, {});
+
+        return Object.values(groupedData)[0];
     }
 
     private isValidDateRange(
@@ -255,31 +381,42 @@ class ScheduleUtils {
         callback: () => Promise<void>,
     ) {
         const [hour, minute] = schedule.time.split(':').map(Number);
-        const cronJob = cron.schedule(`${minute} ${hour} * * *`, async () => {
-            const currentDate = new Date();
+        const cronJob = cron.schedule(
+            `${minute} ${hour} * * *`,
+            async () => {
+                const currentDate = new Date();
 
-            if (
-                !this.isValidDateRange(
-                    currentDate,
-                    schedule.start,
-                    schedule.end,
-                )
-            ) {
-                cronJob.stop();
-                schedules = schedules.filter(
-                    (s) => s.remind.remind_id !== remind.remind_id,
-                );
-                await this.updateSchedulesInRedis();
-                return;
-            }
+                if (
+                    !this.isValidDateRange(
+                        currentDate,
+                        schedule.start,
+                        schedule.end,
+                    )
+                ) {
+                    cronJob.stop();
+                    const { data } = await this.getRemindFromRedisById(
+                        remind.id,
+                    );
+                    const r = JSON.parse(data);
+                    r.schedules = r.schedules.filter(
+                        (s: any) => s.time !== schedule.time,
+                    );
+                    reminds = reminds.map((item) =>
+                        item.id === remind.id ? r : item,
+                    );
+                    await this.updateSchedulesInRedis(remind.id);
+                    return;
+                }
 
-            try {
-                await callback();
-            } catch (error) {
-                console.error('Error during cron job execution:', error);
-            }
-        });
-
+                try {
+                    await callback();
+                } catch (error) {
+                    console.error('Error during cron job execution:', error);
+                }
+            },
+            { name: `${remind.id}-${schedule.time}-schedule` },
+        );
+        cronJobs.set(`${remind.id}-${schedule.time}-schedule`, cronJob);
         return cronJob;
     }
 
@@ -290,18 +427,17 @@ class ScheduleUtils {
     ) {
         const cronJob = this.createCronJob(schedule, remind, callback);
         cronJob.start();
-        schedules.push({ remind, schedule });
-        await this.updateSchedulesInRedis();
     }
 
-    private async updateSchedulesInRedis() {
+    private async updateSchedulesInRedis(remind_id: any) {
         const isRedisReady = redisModel.redis.instanceConnect.isReady;
         if (isRedisReady) {
             try {
-                await redisModel.set(
-                    'schedules',
-                    JSON.stringify(schedules),
-                    'schedule.util.ts',
+                await redisModel.hSet(
+                    'remind',
+                    remind_id,
+                    JSON.stringify(reminds),
+                    'remind.models.ts',
                     Date.now(),
                 );
             } catch (error) {
