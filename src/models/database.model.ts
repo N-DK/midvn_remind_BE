@@ -219,6 +219,8 @@ class DatabaseModel {
         return await new Promise((resolve, reject) => {
             const query = `DELETE FROM ${tableName} WHERE ${where}`;
 
+            console.log(query);
+
             db.query(query, conditions, (err, dataRes: any) => {
                 if (err) {
                     console.log(err);
