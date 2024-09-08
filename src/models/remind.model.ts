@@ -123,32 +123,91 @@ class RemindModel extends DatabaseModel {
     }
 
     async addRemind(con: PoolConnection, data: any) {
-        const payload = {
-            img_url: data?.img_url ?? null,
-            note_repair: data?.note_repair ?? null,
-            history_repair: data?.history_repair ?? null,
-            current_kilometers: data?.current_kilometers ?? 0,
-            cumulative_kilometers: data?.cumulative_kilometers ?? 0,
-            expiration_time: data?.time_expire ?? 0,
-            is_deleted: 0,
-            time_before: data?.time_before ?? INFINITY,
-            is_notified: data?.is_notified ?? 0,
-            is_received: data?.is_received ?? 0,
-            remind_category_id: data.remind_category_id,
-            create_time: Date.now(),
-        };
+        try {
+            const payload = {
+                img_url: data?.img_url ?? null,
+                note_repair: data?.note_repair ?? null,
+                history_repair: data?.history_repair ?? null,
+                current_kilometers: data?.current_kilometers ?? 0,
+                cumulative_kilometers: data?.cumulative_kilometers ?? 0,
+                expiration_time: data?.expiration_time ?? 0,
+                is_deleted: 0,
+                km_before: data?.km_before ?? INFINITY,
+                is_notified: data?.is_notified ?? 0,
+                is_received: data?.is_received ?? 0,
+                remind_category_id: data.remind_category_id,
+                create_time: Date.now(),
+            };
 
-        const remind_id = await this.insert(con, tables.tableRemind, payload);
+            const remind_id: any = await this.insert(
+                con,
+                tables.tableRemind,
+                payload,
+            );
 
-        let queryText = `INSERT INTO ${tables.tableRemindVehicle} (remind_id, vehicle_id, tire_seri) VALUES `;
+            const result = await this.insertVehicles(
+                con,
+                remind_id,
+                data?.vehicles,
+                data?.tire_seri,
+            );
 
-        data?.vehicles?.forEach((item: any) => {
-            queryText += `(${remind_id}, '${item}', '${
-                data?.tire_seri ?? null
-            }'),`;
-        });
+            const remind = {
+                ...payload,
+                remind_id,
+                vehicles: data?.vehicles ?? [],
+            };
 
-        queryText = queryText.slice(0, -1);
+            await this.updateRedis(remind_id, remind);
+
+            await this.scheduleCronJobForExpiration(remind);
+
+            for (const schedule of data?.schedules) {
+                await this.handleSchedule(schedule, remind, data?.vehicles);
+            }
+
+            const values = data?.schedules
+                ?.map(
+                    (schedule: any) =>
+                        `(${remind_id}, ${schedule.start}, ${schedule.end}, '${
+                            schedule.time
+                        }', ${Date.now()})`,
+                )
+                .join(',');
+
+            const queryText = `INSERT INTO ${tables.tableRemindSchedule} (remind_id, start, end, time, create_time) VALUES ${values}`;
+
+            await new Promise((resolve, reject) => {
+                con.query(queryText, (err: any, result) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(result);
+                    }
+                });
+            });
+
+            return result;
+        } catch (error) {
+            console.error('Error adding remind:', error);
+            throw error;
+        }
+    }
+
+    async insertVehicles(
+        con: PoolConnection,
+        remind_id: number,
+        vehicles: any[],
+        tire_seri: string | null,
+    ) {
+        const values = vehicles
+            ?.map(
+                (vehicle: any) =>
+                    `(${remind_id}, '${vehicle}', '${tire_seri ?? null}')`,
+            )
+            .join(',');
+
+        const queryText = `INSERT INTO ${tables.tableRemindVehicle} (remind_id, vehicle_id, tire_seri) VALUES ${values}`;
 
         const result = await new Promise((resolve, reject) => {
             con.query(queryText, (err: any, result) => {
@@ -160,57 +219,48 @@ class RemindModel extends DatabaseModel {
             });
         });
 
-        // save redis
+        return result;
+    }
+
+    async updateRedis(remind_id: number, remind: any) {
         const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
         if (isRedisReady) {
             await redisModel.hSet(
                 'remind',
                 remind_id,
-                JSON.stringify({
-                    ...payload,
-                    remind_id,
-                    vehicles: data?.vehicles ?? [],
-                }),
+                JSON.stringify(remind),
                 'remind.models.ts',
                 Date.now(),
             );
         }
+    }
 
-        for (const schedule of data?.schedules) {
-            const res = await this.insert(con, tables.tableRemindSchedule, {
-                remind_id,
-                start: schedule.start,
-                end: schedule.end,
+    async scheduleCronJobForExpiration(remind: any) {
+        const cronJob = await scheduleUtils.createCronJobForExpired(
+            new Date(remind.expiration_time * 1000 + 86400000),
+            remind,
+        );
+        cronJob.start();
+    }
+
+    async handleSchedule(schedule: any, remind: any, vehicles: any[]) {
+        // Create and schedule reminders
+        scheduleUtils.createSchedule(
+            {
+                start: new Date(schedule.start * 1000),
+                end: new Date(schedule.end * 1000),
                 time: schedule.time,
-                // create_time: Date.now(),
-            });
-
-            scheduleUtils.createSchedule(
-                {
-                    start: new Date(schedule.start * 1000),
-                    end: new Date(schedule.end * 1000),
-                    time: schedule.time,
-                },
-                async () => {
-                    await remindFeature.sendNotifyRemind(
-                        'http://localhost:3007',
-                        {
-                            name_remind: payload.note_repair + ' NDK',
-                            vehicle_name: data.vehicles.join(', '),
-                            user_id: 5,
-                        },
-                    );
-                },
-                {
-                    ...payload,
-                    remind_id,
-                    vehicles: data?.vehicles ?? [],
-                },
-            );
-        }
-
-        return result;
+            },
+            async () => {
+                await remindFeature.sendNotifyRemind('http://localhost:3007', {
+                    name_remind: remind.note_repair + ' NDK',
+                    vehicle_name: vehicles.join(', '),
+                    user_id: 5,
+                });
+            },
+            remind,
+        );
     }
 
     async updateNotifiedOff(con: PoolConnection, remindID: number) {
