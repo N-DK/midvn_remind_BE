@@ -4,6 +4,7 @@ import { tables } from '../constants/tableName.constant';
 import redisModel from './redis.model';
 import { remindFeature } from 'notify-services';
 import scheduleUtils from '../utils/schedule.util';
+import reminder from '../utils/reminder.util';
 const INFINITY = 2147483647;
 
 class RemindModel extends DatabaseModel {
@@ -433,7 +434,7 @@ class RemindModel extends DatabaseModel {
 
     async search(con: PoolConnection, userID: number, query: any) {
         let params: any[] = [userID];
-        if(query.keyword === null) query.keyword = '';  
+        if (query.keyword === null) query.keyword = '';
         let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? ${
             query.vehicle_id
                 ? `AND ${tables.tableVehicleNoGPS}.license_plate = ${query.vehicle_id}`
@@ -539,6 +540,10 @@ class RemindModel extends DatabaseModel {
             }
         }
         return result;
+    }
+
+    async getAllGPS(con: PoolConnection, query: any) {
+        return reminder.getRemindsByVehicleId(query.vehicle_id);
     }
 }
 

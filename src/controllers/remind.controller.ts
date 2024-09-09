@@ -69,7 +69,14 @@ class RemindController {
             );
             UPDATE(res, result);
         },
-    )
+    );
+
+    getAllGPS = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const data = await remindService.getAllGPS(req.query);
+            GET(res, data);
+        },
+    );
 }
 
 export default new RemindController();

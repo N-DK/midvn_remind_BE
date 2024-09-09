@@ -151,6 +151,20 @@ class RemindService {
             );
         }
     }
+
+    async getAllGPS(query: any) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindModel.getAllGPS(conn, query);
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindService();
