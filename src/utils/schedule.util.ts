@@ -41,21 +41,21 @@ class ScheduleUtils {
     private async restoreCronJobsForExpired() {
         const reminds: any = await this.loadReminds();
 
-        console.log('remind ', reminds);
+        // console.log('remind ', reminds);
 
         if (!reminds?.length) return;
 
         for (const remind of reminds) {
             const expirationTime = new Date(
-                remind.expiration_time, // + 86400000 // 1 day
+                remind.expiration_time + 86400000, // + 86400000 // 1 day
             );
 
-            console.log(
-                'expirationTime',
-                expirationTime,
-                'remind.expiration_time',
-                remind.expiration_time,
-            );
+            // console.log(
+            //     'expirationTime',
+            //     expirationTime,
+            //     'remind.expiration_time',
+            //     remind.expiration_time,
+            // );
 
             const cronJob = await this.createCronJobForExpired(
                 expirationTime,
@@ -82,13 +82,13 @@ class ScheduleUtils {
         //     });
         // }
 
-        console.log('other', other);
-        console.log('schedule', remind.schedules);
+        // console.log('other', other);
+        // console.log('schedule', remind.schedules);
 
         console.table({ remind: remind.id, month, day });
 
         const cronJob = cron.schedule(
-            `* * 8-20 ${day} ${month} *`, // */20 8-20
+            `*/20 8-20 ${day} ${month} *`, // */20 8-20
             async () => {
                 try {
                     await remindModel.addRemind(this.conn, {
@@ -120,18 +120,22 @@ class ScheduleUtils {
                 } finally {
                     cronJob.stop();
                     if (isRedisReady) {
-                        const { data } = await this.getRemindFromRedis();
+                        // const { data } = await this.getRemindFromRedis();
 
-                        const key = Object.keys(data).find((key: any) => {
-                            data[key].remind.remind_id === remind.remind_id;
-                        });
-                        console.log('key', key);
-                        // await redisModel.hDel(
-                        //     'remind',
-                        //     key,
-                        //     'schedule.utils.ts',
-                        //     Date.now(),
-                        // );
+                        // const key = Object.keys(data).find((key: any) => {
+                        //     const item = JSON.parse(data[key]);
+
+                        //     return item.id === remind.id;
+                        // });
+                        // console.log('key', remind.id);
+                        const result = await redisModel.hDel(
+                            'remind',
+                            remind.id.toString(),
+                            'schedule.utils.ts',
+                            Date.now(),
+                        );
+
+                        // console.log('result', result);
                     } else {
                         await this.databaseModel.update(
                             this.conn,
@@ -297,13 +301,13 @@ class ScheduleUtils {
     public async destroyAllCronJobByRemindId(remind_id: any, type: string) {
         cronJobs.forEach((job, key) => {
             if (key.includes(remind_id) && key.includes(type)) {
-                console.log('key', key, 'job', job);
+                // console.log('key', key, 'job', job);
                 job.stop();
                 cronJobs.delete(key);
             }
         });
 
-        console.log('cronJobs', cronJobs.size);
+        // console.log('cronJobs', cronJobs.size);
 
         // const cronJobs = Array.from(cron.getTasks()).filter(([_, job]) => {
         //     console.log('job', job);

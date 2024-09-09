@@ -34,7 +34,7 @@ class RemindModel extends DatabaseModel {
                ${tables.tableRemind}.create_time AS remind_create_time,
                ${tables.tableRemind}.update_time AS remind_update_time,
                
-               ${tables.tableRemindCategory}.id AS category_id,
+               ${tables.tableRemindCategory}.id AS remind_category_id,
                ${tables.tableRemindCategory}.name AS category_name,
                ${tables.tableRemindCategory}.desc AS category_desc,
                ${tables.tableRemindCategory}.icon AS category_icon,
@@ -84,7 +84,6 @@ class RemindModel extends DatabaseModel {
                  ${tables.tableRemind}.current_kilometers AS current_kilometers,
                  ${tables.tableRemind}.cumulative_kilometers AS cumulative_kilometers,
                  ${tables.tableRemind}.expiration_time AS expiration_time,
-                 ${tables.tableRemind}.time_before AS time_before,
                  ${tables.tableRemind}.is_notified AS is_notified,
                  ${tables.tableRemind}.is_received AS is_received,
                  ${tables.tableRemind}.create_time AS remind_create_time,
@@ -434,6 +433,7 @@ class RemindModel extends DatabaseModel {
 
     async search(con: PoolConnection, userID: number, query: any) {
         let params: any[] = [userID];
+        if(query.keyword === null) query.keyword = '';  
         let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? ${
             query.vehicle_id
                 ? `AND ${tables.tableVehicleNoGPS}.license_plate = ${query.vehicle_id}`
@@ -448,7 +448,9 @@ class RemindModel extends DatabaseModel {
         }%' OR 
                 ${tables.tableVehicleNoGPS}.license LIKE '%${query.keyword}%'
             )`;
-
+        if (query.remind_category_id) {
+            whereClause += ` AND ${tables.tableRemind}.remind_category_id = ${query.remind_category_id}`;
+        }
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
@@ -465,13 +467,12 @@ class RemindModel extends DatabaseModel {
                ${tables.tableRemind}.current_kilometers AS current_kilometers,
                ${tables.tableRemind}.cumulative_kilometers AS cumulative_kilometers,
                ${tables.tableRemind}.expiration_time AS expiration_time,
-               ${tables.tableRemind}.time_before AS time_before,
                ${tables.tableRemind}.is_notified AS is_notified,
                ${tables.tableRemind}.is_received AS is_received,
                ${tables.tableRemind}.create_time AS remind_create_time,
                ${tables.tableRemind}.update_time AS remind_update_time,
                
-               ${tables.tableRemindCategory}.id AS category_id,
+               ${tables.tableRemindCategory}.id AS remind_category_id,
                ${tables.tableRemindCategory}.name AS category_name,
                ${tables.tableRemindCategory}.desc AS category_desc,
                ${tables.tableRemindCategory}.icon AS category_icon,
@@ -484,17 +485,17 @@ class RemindModel extends DatabaseModel {
                 {
                     table: tables.tableRemindVehicle,
                     on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-                    type: 'LEFT',
+                    type: 'INNER',
                 },
                 {
                     table: tables.tableRemind,
                     on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
-                    type: 'LEFT',
+                    type: 'INNER',
                 },
                 {
                     table: tables.tableRemindCategory,
                     on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
-                    type: 'LEFT',
+                    type: 'INNER',
                 },
             ],
         );

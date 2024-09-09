@@ -1,5 +1,5 @@
 export const tables = {
-    tableVehicleNoGPS: 'tbl_vehicle_no_GPS',
+    tableVehicleNoGPS: 'tbl_vehicle_no_gps',
     tableRemindCategory: 'tbl_remind_category',
     tableRemind: 'tbl_remind',
     tableTire: 'tbl_tire',

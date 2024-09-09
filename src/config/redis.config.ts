@@ -4,5 +4,5 @@ const { REDIS_HOST, REDIS_PASS, REDIS_PORT } = configureEnvironment();
 
 export default {
     url: `redis://:${REDIS_PASS}@${REDIS_HOST}:${REDIS_PORT}`,
-    // url: `redis://default:qUzmsOnXWOMnnoMYIRjBnBpsKNmDHvhq@autorack.proxy.rlwy.net:54327`,
+    // url: `redis://default:${REDIS_PASS}@${REDIS_HOST}:${REDIS_PORT}`,
 };
