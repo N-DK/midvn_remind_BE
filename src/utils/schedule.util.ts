@@ -99,8 +99,8 @@ class ScheduleUtils {
                             1000,
                         schedules: remind.schedules.map((s: any) => ({
                             ...s,
-                            start: s.start + remind.cycle * this.UNIT_MONTH,
-                            end: s.end + remind.cycle * this.UNIT_MONTH,
+                            start: s.start + remind.cycle * this.UNIT_MONTH *1000,
+                            end: s.end + remind.cycle * this.UNIT_MONTH *1000,
                         })),
                     });
                     await remindFeature.sendNotifyRemind(
