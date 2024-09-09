@@ -34,7 +34,7 @@ class RemindModel extends DatabaseModel {
                ${tables.tableRemind}.create_time AS remind_create_time,
                ${tables.tableRemind}.update_time AS remind_update_time,
                
-               ${tables.tableRemindCategory}.id AS category_id,
+               ${tables.tableRemindCategory}.id AS remind_category_id,
                ${tables.tableRemindCategory}.name AS category_name,
                ${tables.tableRemindCategory}.desc AS category_desc,
                ${tables.tableRemindCategory}.icon AS category_icon,
@@ -468,7 +468,7 @@ class RemindModel extends DatabaseModel {
                ${tables.tableRemind}.create_time AS remind_create_time,
                ${tables.tableRemind}.update_time AS remind_update_time,
                
-               ${tables.tableRemindCategory}.id AS category_id,
+               ${tables.tableRemindCategory}.id AS remind_category_id,
                ${tables.tableRemindCategory}.name AS category_name,
                ${tables.tableRemindCategory}.desc AS category_desc,
                ${tables.tableRemindCategory}.icon AS category_icon,
