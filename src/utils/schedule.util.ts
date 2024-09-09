@@ -1,5 +1,5 @@
 import cron, { schedule, ScheduledTask } from 'node-cron';
-import { isBefore, isAfter, startOfDay } from 'date-fns';
+import { isBefore, isAfter, startOfDay, endOfDay, isEqual } from 'date-fns';
 import redisModel from '../models/redis.model';
 import { remindFeature } from 'notify-services';
 import DatabaseModel from '../models/database.model';
@@ -47,10 +47,15 @@ class ScheduleUtils {
 
         for (const remind of reminds) {
             const expirationTime = new Date(
-                remind.expiration_time * 1000 + 86400000, // + 86400000 // 1 day
+                remind.expiration_time, // + 86400000 // 1 day
             );
 
-            console.log('expirationTime', expirationTime);
+            console.log(
+                'expirationTime',
+                expirationTime,
+                'remind.expiration_time',
+                remind.expiration_time,
+            );
 
             const cronJob = await this.createCronJobForExpired(
                 expirationTime,
@@ -83,14 +88,15 @@ class ScheduleUtils {
         console.table({ remind: remind.id, month, day });
 
         const cronJob = cron.schedule(
-            `*/20 8-20 ${day} ${month} *`, // */20 8-20
+            `* * 8-20 ${day} ${month} *`, // */20 8-20
             async () => {
                 try {
                     await remindModel.addRemind(this.conn, {
                         ...other,
                         expiration_time:
-                            Math.ceil(Date.now() / 1000) *
-                            (remind.cycle * this.UNIT_MONTH),
+                            (Math.ceil(Date.now() / 1000) +
+                                remind.cycle * this.UNIT_MONTH) *
+                            1000,
                         schedules: remind.schedules.map((s: any) => ({
                             ...s,
                             start: s.start + remind.cycle * this.UNIT_MONTH,
@@ -150,8 +156,8 @@ class ScheduleUtils {
             for (const schedule of remind.schedules) {
                 const cronJob = this.createCronJob(
                     {
-                        start: new Date(schedule.start * 1000),
-                        end: new Date(schedule.end * 1000),
+                        start: new Date(schedule.start),
+                        end: new Date(schedule.end),
                         time: schedule.time,
                     },
                     remind,
@@ -213,7 +219,7 @@ class ScheduleUtils {
                 return results.filter(
                     (item) =>
                         !isBefore(
-                            new Date(item.expiration_time * 1000),
+                            new Date(item.expiration_time),
                             startOfDay(new Date()),
                         ),
                 );
@@ -229,7 +235,7 @@ class ScheduleUtils {
                             item.is_notified === 0 &&
                             item.is_deleted === 0 &&
                             !isBefore(
-                                new Date(item.expiration_time * 1000),
+                                new Date(item.expiration_time),
                                 startOfDay(new Date()),
                             )
                         );
@@ -292,11 +298,12 @@ class ScheduleUtils {
         cronJobs.forEach((job, key) => {
             if (key.includes(remind_id) && key.includes(type)) {
                 console.log('key', key, 'job', job);
-
-                // job.stop();
-                // cronJobs.delete(key);
+                job.stop();
+                cronJobs.delete(key);
             }
         });
+
+        console.log('cronJobs', cronJobs.size);
 
         // const cronJobs = Array.from(cron.getTasks()).filter(([_, job]) => {
         //     console.log('job', job);
@@ -372,7 +379,11 @@ class ScheduleUtils {
         start: Date,
         end: Date,
     ): boolean {
-        return !isBefore(currentDate, start) && !isAfter(currentDate, end);
+        return (
+            (!isBefore(currentDate, start) && !isAfter(currentDate, end)) ||
+            (isEqual(startOfDay(currentDate), startOfDay(start)) &&
+                isEqual(startOfDay(currentDate), startOfDay(end)))
+        );
     }
 
     public createCronJob(

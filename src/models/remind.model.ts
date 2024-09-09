@@ -29,7 +29,6 @@ class RemindModel extends DatabaseModel {
                ${tables.tableRemind}.current_kilometers AS current_kilometers,
                ${tables.tableRemind}.cumulative_kilometers AS cumulative_kilometers,
                ${tables.tableRemind}.expiration_time AS expiration_time,
-               ${tables.tableRemind}.time_before AS time_before,
                ${tables.tableRemind}.is_notified AS is_notified,
                ${tables.tableRemind}.is_received AS is_received,
                ${tables.tableRemind}.create_time AS remind_create_time,
@@ -183,6 +182,10 @@ class RemindModel extends DatabaseModel {
         vehicles: any[],
         tire_seri: string | null,
     ) {
+        if (!vehicles || vehicles.length === 0) {
+            return;
+        }
+
         const values = vehicles
             ?.map(
                 (vehicle: any) =>
@@ -221,7 +224,7 @@ class RemindModel extends DatabaseModel {
 
     async scheduleCronJobForExpiration(remind: any) {
         const cronJob = await scheduleUtils.createCronJobForExpired(
-            new Date(remind.expiration_time * 1000 + 86400000),
+            new Date(remind.expiration_time + 86400000),
             remind,
         );
         cronJob.start();
@@ -231,8 +234,8 @@ class RemindModel extends DatabaseModel {
         // Create and schedule reminders
         scheduleUtils.createSchedule(
             {
-                start: new Date(schedule.start * 1000),
-                end: new Date(schedule.end * 1000),
+                start: new Date(schedule.start),
+                end: new Date(schedule.end),
                 time: schedule.time,
             },
             async () => {
