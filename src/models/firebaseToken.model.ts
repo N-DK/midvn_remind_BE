@@ -8,7 +8,7 @@ class TokenFirebase extends DatabaseModel {
         super();
     }
 
-    async addToken(conn: PoolConnection, data: any, userID: number) {
+    async addToken(conn: PoolConnection, data: any, userID: number,parentID: number){
         const tokenIsExist: any = await this.select(
             conn,
             tables.tableTokenFirebase,
@@ -24,13 +24,19 @@ class TokenFirebase extends DatabaseModel {
                 StatusCodes.CONFLICT,
             );
         }
-
         const result = await this.insert(conn, tables.tableTokenFirebase, {
             user_id: userID,
             token: data.token,
             created_at: Date.now(),
         });
-
+        const addToUser = await this.insert(
+            conn,
+            tables.tableUser,
+            {
+                user_id: userID,
+                parent_id: parentID,
+            },
+        )
         return result;
     }
 
