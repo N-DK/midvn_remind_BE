@@ -263,7 +263,7 @@ class ScheduleUtils {
 
         const reminds = await Promise.all(
             results.map(async (item: any) => {
-                const schedules = await this.buildSchedule();
+                const schedules = await this.buildSchedule(item.id);
                 const vehicles = await this.getVehiclesByRemindId(item.id);
                 return {
                     ...item,
@@ -340,12 +340,12 @@ class ScheduleUtils {
         return vehicles.map((v: any) => v.license_plate);
     }
 
-    private async buildSchedule() {
+    private async buildSchedule(remindId: any) {
         const result: any = await this.databaseModel.selectWithJoins(
             this.conn,
             tables.tableRemindSchedule,
             '*',
-            'remind_id IS NOT NULL',
+            `remind_id = ${remindId}`,
             [],
             [
                 {
