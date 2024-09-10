@@ -232,6 +232,7 @@ class ScheduleUtils {
 
                 return Object.values(data)
                     .filter((item: any) => {
+                        console.log(item)
                         item = JSON.parse(item);
 
                         return (

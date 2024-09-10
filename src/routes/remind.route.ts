@@ -117,6 +117,15 @@ router.post(
     remindController.finishRemind,
 );
 
+router.get(
+    '/get-finish-remind/:id',
+    [
+        param('id', constants.VALIDATE_DATA)
+    ],
+    verifyToken,
+    remindController.getFinishRemind,
+);
+
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);
 };
