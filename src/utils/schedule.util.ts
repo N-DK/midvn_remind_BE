@@ -99,8 +99,9 @@ class ScheduleUtils {
                             1000,
                         schedules: remind.schedules.map((s: any) => ({
                             ...s,
-                            start: s.start + remind.cycle * this.UNIT_MONTH *1000,
-                            end: s.end + remind.cycle * this.UNIT_MONTH *1000,
+                            start:
+                                s.start + remind.cycle * this.UNIT_MONTH * 1000,
+                            end: s.end + remind.cycle * this.UNIT_MONTH * 1000,
                         })),
                     });
                     await remindFeature.sendNotifyRemind(
@@ -232,7 +233,7 @@ class ScheduleUtils {
 
                 return Object.values(data)
                     .filter((item: any) => {
-                        console.log(item)
+                        console.log(item);
                         item = JSON.parse(item);
 
                         return (
@@ -253,7 +254,7 @@ class ScheduleUtils {
         }
     }
 
-    private async getReminds() {
+    public async getReminds() {
         const results: any = await this.databaseModel.select(
             this.conn,
             tables.tableRemind,
@@ -302,13 +303,13 @@ class ScheduleUtils {
     public async destroyAllCronJobByRemindId(remind_id: any, type: string) {
         cronJobs.forEach((job, key) => {
             if (key.includes(remind_id) && key.includes(type)) {
-                // console.log('key', key, 'job', job);
+                console.log('key', key, 'job', job);
                 job.stop();
                 cronJobs.delete(key);
             }
         });
 
-        // console.log('cronJobs', cronJobs.size);
+        console.log('cronJobs', cronJobs.size);
 
         // const cronJobs = Array.from(cron.getTasks()).filter(([_, job]) => {
         //     console.log('job', job);
@@ -341,7 +342,7 @@ class ScheduleUtils {
         return vehicles.map((v: any) => v.license_plate);
     }
 
-    private async buildSchedule(remindId: any) {
+    public async buildSchedule(remindId: any) {
         const result: any = await this.databaseModel.selectWithJoins(
             this.conn,
             tables.tableRemindSchedule,

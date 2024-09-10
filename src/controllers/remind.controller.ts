@@ -71,23 +71,30 @@ class RemindController {
         },
     );
     finishRemind = catchAsync(
-        async (req: Request, res: Response, Next : NextFunction) => {
+        async (req: Request, res: Response, Next: NextFunction) => {
             const result = await remindService.finishRemind(
                 parseInt(req.params.id),
-                req.body.user.userId
+                req.body.user.userId,
             );
             UPDATE(res, result);
-        }
-    )
+        },
+    );
     getFinishRemind = catchAsync(
-        async (req: Request, res: Response, Next : NextFunction) => {
+        async (req: Request, res: Response, Next: NextFunction) => {
             const result = await remindService.getFinishRemind(
                 req.params.id,
-                req.body.user.userId
+                req.body.user.userId,
             );
             GET(res, result);
-        }
-    )
+        },
+    );
+
+    getAllGPS = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const data = await remindService.getAllGPS(req.query);
+            GET(res, data);
+        },
+    );
 }
 
 export default new RemindController();

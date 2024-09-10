@@ -49,7 +49,6 @@ initMqtt();
 // remind
 import reminder from './utils/reminder.util';
 reminder.init();
-reminder.start();
 
 // import routes
 import route from './routes';

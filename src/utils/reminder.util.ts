@@ -17,105 +17,28 @@ const reminder = {
         const { conn } = await getConnection();
         connection = conn;
     },
+    getRemindsByVehicleId: async (vehicleId: string) => {
+        const results: any = await dataBaseModel.selectWithJoins(
+            connection,
+            tables.tableRemindVehicle,
+            '*',
+            'vehicle_id = ?',
+            [vehicleId],
+            [
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemindCategory}.id = ${tables.tableRemind}.remind_category_id`,
+                    type: 'LEFT',
+                },
+            ],
+        );
 
-    start: async () => {
-        // TEST
-        // cron.schedule('* * * * *', async () => {
-        //     // Mỗi phút kiểm tra
-        //     try {
-        //         console.log('Đang kiểm tra nhắc nhở');
-        //         scheduleUtls.createSchedule(
-        //             {
-        //                 start: new Date('2024-7-09'),
-        //                 end: new Date('2024-7-9'),
-        //                 time: '11:28',
-        //             },
-        //             async () => {
-        //                 // Mỗi ngày 0h kiểm tra
-        //                 console.log('Đang kiểm tra nhắc nhở hàng ngày');
-        //                 await remindFeature.sendNotifyRemind(
-        //                     'http://localhost:3007',
-        //                     {
-        //                         name_remind: ' NDK',
-        //                         vehicle_name: '123',
-        //                         user_id: 5,
-        //                     },
-        //                 );
-        //             },
-        //         );
-        //         const isRedisReady = redisModel.redis.instanceConnect.isReady;
-        //         const now = Date.now(); // Lấy thời gian hiện tại
-        //         // const gps = (await GPSApi.getGPSData())?.data; // Lấy dữ liệu GPS
-        //         const gps: any = {};
-        //         let reminds = [];
-        //         if (isRedisReady) {
-        //             // get all remind from redis
-        //             const { data } = await redisModel.hGetAll(
-        //                 'remind',
-        //                 'remind.model.ts',
-        //                 Date.now(),
-        //             );
-        //             reminds = Object.values(data);
-        //         } else {
-        //             const whereClause = `is_received = 0  AND is_notified = 0 AND (expiration_time - ? <= time_before)`;
-        //             const results: any = await dataBaseModel.select(
-        //                 connection,
-        //                 tables.tableRemind,
-        //                 '*',
-        //                 whereClause,
-        //                 gps?.total_distance
-        //                     ? [now, gps?.total_distance]
-        //                     : [now],
-        //             );
-        //             reminds = results;
-        //         }
-        //         for (const r of reminds) {
-        //             // select vehicle by remind id from tbl_remind_vehicle
-        //             const remind = JSON.parse(r);
-        //             // await remindFeature.sendNotifyRemind(
-        //             //     'http://localhost:3007',
-        //             //     {
-        //             //         name_remind: remind.note_repair + ' NDK',
-        //             //         vehicle_name: remind.vehicles,
-        //             //         user_id: remind.user_id,
-        //             //     },
-        //             // );
-        //         }
-        //     } catch (error) {
-        //         console.log(error);
-        //     }
-        // });
-    },
-
-    remindExpirationTime: () => {
-        cron.schedule('* * * * *', () => {
-            // Mỗi phút kiểm tra
-            const now = Date.now();
-            const results: any = dataBaseModel.select(
-                connection,
-                'tbl_remind',
-                '*',
-                'expiration_time <= ? AND is_notified = FALSE AND expiration_time - ? = time_before',
-                [now],
-            );
-
-            for (const remind of results) {
-                console.log(
-                    `Reminder: ${remind.title} - ${remind.description}`,
-                );
-
-                // Gửi thông báo
-                if (remind.expiration_time <= now) {
-                    dataBaseModel.update(
-                        connection,
-                        'tbl_remind',
-                        'is_notified = TRUE',
-                        'id = ?',
-                        [remind.id],
-                    );
-                }
-            }
-        });
+        return results;
     },
 };
 
