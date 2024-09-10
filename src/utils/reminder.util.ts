@@ -21,7 +21,7 @@ const reminder = {
         const results: any = await dataBaseModel.selectWithJoins(
             connection,
             tables.tableRemindVehicle,
-            '*',
+            `${tables.tableRemindCategory}.*, ${tables.tableRemindVehicle}.*, ${tables.tableRemind}.*`,
             'vehicle_id = ?',
             [vehicleId],
             [

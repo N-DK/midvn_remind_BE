@@ -1,12 +1,7 @@
-import { PoolConnection } from 'mysql2';
 import { mylogger } from '../../../logger';
-import DatabaseModel from '../../../models/database.model';
 import redisModel from '../../../models/redis.model';
-import { tables } from '../../../constants/tableName.constant';
 import { remindFeature as remindNotify } from 'notify-services';
-import scheduleUtil from '../../schedule.util';
 import reminder from '../../reminder.util';
-const databaseModel = new DatabaseModel();
 
 const remindFeature = async (client: any, data: any, requestId: any) => {
     const isRedisReady = redisModel.redis.instanceConnect.isReady;
@@ -14,9 +9,9 @@ const remindFeature = async (client: any, data: any, requestId: any) => {
     try {
         if (!data || !Object.keys(data).length) return;
 
-        // let reminds: any = [];
+        // if (data.imei === '2102000171') console.log('remindFeature', data);
 
-        // console.log(await reminder.getRemindsByVehicleId('08F596398A'));
+        let reminds: any = [];
 
         // if (isRedisReady) {
         //     const { data } = await redisModel.hGetAll(
@@ -32,15 +27,26 @@ const remindFeature = async (client: any, data: any, requestId: any) => {
         //     reminds = results;
         // }
 
-        // km_before, current_kilometers, cumulative_kilometers
-        // if(current_kilometers + cumulative_kilometers - km_before >= data.total_distance)
-        // for (const remind of reminds) {
-        // remindNotify.sendNotifyRemind('', {
-        //     name_remind: '',
-        //     vehicle_name: '',
-        //     user_id,
-        // });
-        // }
+        reminds = await reminder.getRemindsByVehicleId(data.imei);
+
+        if (reminds.length > 0) {
+            // console.log('reminds', reminds);
+            for (const remind of reminds) {
+                const isOverKm =
+                    data.total_distance >=
+                    remind.current_kilometers +
+                        remind.cumulative_kilometers -
+                        remind.km_before;
+
+                if (isOverKm) {
+                    remindNotify.sendNotifyRemind('http://localhost:3007', {
+                        name_remind: 'Vượt quá số km bảo dưỡng',
+                        vehicle_name: data.vehicle_name,
+                        user_id: 5, //remind.user_id,
+                    });
+                }
+            }
+        }
     } catch (error) {
         console.log(error);
         mylogger.error('message', ['nameFeature', requestId, error]);

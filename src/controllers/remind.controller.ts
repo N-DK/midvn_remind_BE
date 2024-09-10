@@ -74,7 +74,7 @@ class RemindController {
         async (req: Request, res: Response, Next: NextFunction) => {
             const result = await remindService.finishRemind(
                 parseInt(req.params.id),
-                req.body.user.userId,
+                req.body.user.parentId ?? req.body.user.userId,
             );
             UPDATE(res, result);
         },

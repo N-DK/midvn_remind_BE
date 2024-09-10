@@ -5,6 +5,7 @@ import redisModel from './redis.model';
 import { remindFeature } from 'notify-services';
 import scheduleUtils from '../utils/schedule.util';
 import reminder from '../utils/reminder.util';
+import GPSApi from '../api/GPS.api';
 const INFINITY = 2147483647;
 
 class RemindModel extends DatabaseModel {
@@ -121,13 +122,29 @@ class RemindModel extends DatabaseModel {
         return result;
     }
 
+    async getCurrentKilometersByVehicleId(vehicleID: string, token: string) {
+        const res = await GPSApi.getGPSData(token);
+
+        const data = res?.data;
+        if (!data) return 0;
+        return data[vehicleID]?.total_distance ?? 0;
+    }
+
     async addRemind(con: PoolConnection, data: any) {
+        const token =
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjI4LCJwYXJlbnRJZCI6MjcsImNsaWVudElkIjoiOTNhMjg2MzYtYWEzZi00MWRkLTkxMmMtNDRlOWVhOTQxMjUxIiwicm9sZSI6NTAsImxldmVsIjoxMCwiY3VzdG9tZXJJZCI6MjYsImlhdCI6MTcyNTk2NTk3NCwiZXhwIjoxNzI4NTU3OTc0fQ.pQOycXQ2zJRlzEkJHCIGHLJJR6Gj8AHS7Xv7foXC04U';
+
+        const currentKilometers = await this.getCurrentKilometersByVehicleId(
+            data?.vehicles[0],
+            token,
+        );
+
         try {
             const payload = {
                 img_url: data?.img_url ?? null,
                 note_repair: data?.note_repair ?? null,
                 history_repair: data?.history_repair ?? null,
-                current_kilometers: data?.current_kilometers ?? 0,
+                current_kilometers: currentKilometers,
                 cumulative_kilometers: data?.cumulative_kilometers ?? 0,
                 expiration_time: data?.expiration_time ?? 0,
                 is_deleted: 0,
@@ -137,7 +154,7 @@ class RemindModel extends DatabaseModel {
                 remind_category_id: data?.remind_category_id,
                 cycle: data?.cycle ?? 0,
                 create_time: Date.now(),
-                user_id: data?.user?.userId,
+                user_id: data?.user?.parentId ?? data?.user?.userId,
             };
 
             const remind_id: any = await this.insert(
@@ -241,7 +258,7 @@ class RemindModel extends DatabaseModel {
                 await remindFeature.sendNotifyRemind('http://localhost:3007', {
                     name_remind: remind.note_repair + ' NDK',
                     vehicle_name: vehicles.join(', '),
-                    user_id: 5,
+                    user_id: remind.user_id,
                 });
             },
             remind,

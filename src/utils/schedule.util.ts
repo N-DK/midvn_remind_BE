@@ -93,6 +93,7 @@ class ScheduleUtils {
                 try {
                     await remindModel.addRemind(this.conn, {
                         ...other,
+                        user: { userId: remind.user_id },
                         expiration_time:
                             (Math.ceil(Date.now() / 1000) +
                                 remind.cycle * this.UNIT_MONTH) *
@@ -110,7 +111,7 @@ class ScheduleUtils {
                             name_remind:
                                 'Hạn bảo dưỡng ' + remind.note_repair + ' NDK',
                             vehicle_name: 'Xe ' + remind.vehicles.join(', '),
-                            user_id: 5,
+                            user_id: remind.user_id,
                         },
                     );
                 } catch (error) {
@@ -119,7 +120,14 @@ class ScheduleUtils {
                         error,
                     );
                 } finally {
-                    cronJob.stop();
+                    // cronJob.stop();
+                    // console.log('cronJobs before', cronJobs.size);
+
+                    this.destroyAllCronJobByRemindId(remind.id, 'schedule');
+                    this.destroyAllCronJobByRemindId(remind.id, 'expire');
+
+                    // console.log('cronJobs after', cronJobs.size);
+
                     if (isRedisReady) {
                         // const { data } = await this.getRemindFromRedis();
 
@@ -170,9 +178,10 @@ class ScheduleUtils {
                         await remindFeature.sendNotifyRemind(
                             'http://localhost:3007',
                             {
-                                name_remind: remind.note_repair + ' NDK',
+                                name_remind:
+                                    'Gia hạn bảo dưỡng ' + remind.note_repair,
                                 vehicle_name: remind.vehicles.join(', '),
-                                user_id: 5,
+                                user_id: remind.user_id,
                             },
                         );
                     },
@@ -233,7 +242,7 @@ class ScheduleUtils {
 
                 return Object.values(data)
                     .filter((item: any) => {
-                        console.log(item);
+                        // console.log(item);
                         item = JSON.parse(item);
 
                         return (
@@ -303,13 +312,13 @@ class ScheduleUtils {
     public async destroyAllCronJobByRemindId(remind_id: any, type: string) {
         cronJobs.forEach((job, key) => {
             if (key.includes(remind_id) && key.includes(type)) {
-                console.log('key', key, 'job', job);
+                // console.log('key', key, 'job', job);
                 job.stop();
                 cronJobs.delete(key);
             }
         });
 
-        console.log('cronJobs', cronJobs.size);
+        // console.log('cronJobs', cronJobs.size);
 
         // const cronJobs = Array.from(cron.getTasks()).filter(([_, job]) => {
         //     console.log('job', job);
