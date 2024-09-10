@@ -108,15 +108,24 @@ router.put(
 //         time_before = time_before of remind_id
 //         return {expiration_time, time_before, cumulative_kilometers}
 // no ==> is_received = 1, update_time = Date.now() return {}
-// router.patch(
-//     '/finish-remind/:id',
-//     [
-//         param('id', constants.VALIDATE_DATA).isNumeric(),
-//         body('is_continue', constants.VALIDATE_DATA).isNumeric(),
-//     ],
-//     verifyToken,
-//     remindController.finishRemind,
-// );
+router.post(
+    '/finish-remind/:id',
+    [
+        param('id', constants.VALIDATE_DATA).isNumeric(),
+    ],
+    verifyToken,
+    remindController.finishRemind,
+);
+
+router.get(
+    '/get-finish-remind/:id',
+    [
+        param('id', constants.VALIDATE_DATA)
+    ],
+    verifyToken,
+    remindController.getFinishRemind,
+);
+
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);
 };

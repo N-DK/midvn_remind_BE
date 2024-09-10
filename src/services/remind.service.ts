@@ -151,6 +151,44 @@ class RemindService {
             );
         }
     }
+    async finishRemind(remindID: number,user_id: number) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const remind = await remindModel.finishRemind(
+                    conn,
+                    remindID,
+                    user_id
+                );
+                return remind;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+    async getFinishRemind(vehicleID: string,user_id: number){
+        try {
+            const { conn } = await getConnection();
+            try {
+                const remind = await remindModel.getFinishRemind(
+                    conn,
+                    vehicleID,
+                    user_id
+                );
+                return remind;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindService();
