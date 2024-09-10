@@ -32,16 +32,16 @@ class VehicleNoGPS extends DatabaseModel {
   }
 
   async addVehicleNoGPS(con: PoolConnection, data: any, userID: number) {
-    let queryText = `INSERT INTO ${tables.tableVehicleNoGPS} (license_plate, user_id, license, create_time, update_time) VALUES `;
+    let queryText = `INSERT INTO ${tables.tableVehicleNoGPS} (license_plate, user_id, license, create_time, update_time,user_name,user_address) VALUES `;
 
     data.forEach((item: any) => {
-      queryText += `('${item.license_plate}', ${userID}, ${
-        item.license
-      }, ${Date.now()}, ${null}),`;
+      queryText += `('${item.license_plate}', ${userID}, '${item.license}', ${Date.now()}, NULL, '${item.user_name}', '${item.user_address}'),`;
     });
-
+    
+    // Loại bỏ dấu phẩy cuối cùng để đảm bảo cú pháp SQL hợp lệ
     queryText = queryText.slice(0, -1);
-
+    
+    
     return new Promise((resolve, reject) => {
       con.query(queryText, (err: any, result) => {
         if (err) {
