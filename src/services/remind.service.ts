@@ -154,9 +154,8 @@ class RemindService {
 
     async getAllGPS(query: any) {
         try {
-            const { conn } = await getConnection();
             try {
-                const result = await remindModel.getAllGPS(conn, query);
+                const result = await remindModel.getAllGPS(query);
                 return result;
             } catch (error) {
                 throw error;

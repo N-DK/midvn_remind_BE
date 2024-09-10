@@ -137,6 +137,7 @@ class RemindModel extends DatabaseModel {
                 remind_category_id: data?.remind_category_id,
                 cycle: data?.cycle ?? 0,
                 create_time: Date.now(),
+                user_id: data?.user?.userId,
             };
 
             const remind_id: any = await this.insert(
@@ -258,16 +259,18 @@ class RemindModel extends DatabaseModel {
             remindID,
         );
 
+        // scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
+
         const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
-        const { data } = await redisModel.hGetAll(
-            'remind',
-            'remind.model.ts',
-            Date.now(),
-        );
-        const reminds: any = isRedisReady ? Object.values(data) : result;
-
         if (isRedisReady) {
+            const { data } = await redisModel.hGetAll(
+                'remind',
+                'remind.model.ts',
+                Date.now(),
+            );
+
+            const reminds: any = Object.values(data);
             const remindIndex = reminds.findIndex(
                 (remind: any) => remind.id === remindID,
             );
@@ -297,16 +300,17 @@ class RemindModel extends DatabaseModel {
             'id',
             remindID,
         );
+
         const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
-        const { data } = await redisModel.hGetAll(
-            'remind',
-            'remind.model.ts',
-            Date.now(),
-        );
-        const reminds: any = isRedisReady ? Object.values(data) : result;
-
         if (isRedisReady) {
+            const { data } = await redisModel.hGetAll(
+                'remind',
+                'remind.model.ts',
+                Date.now(),
+            );
+            const reminds: any = Object.values(data);
+
             const remindIndex = reminds.findIndex(
                 (remind: any) => remind.id === remindID,
             );
@@ -542,8 +546,30 @@ class RemindModel extends DatabaseModel {
         return result;
     }
 
-    async getAllGPS(con: PoolConnection, query: any) {
-        return reminder.getRemindsByVehicleId(query.vehicle_id);
+    async getAllGPS(query: any) {
+        try {
+            // search when query.keyword is not null
+            const { keyword, vehicle_id } = query;
+
+            let reminds: any = await reminder.getRemindsByVehicleId(vehicle_id);
+
+            if (!(typeof keyword === 'string' && keyword.trim() !== ''))
+                return reminds;
+            // search by keyword
+            const results = reminds.filter(
+                (remind: any) =>
+                    // toLowerCase() for case-insensitive search
+                    remind.note_repair
+                        .toLowerCase()
+                        .includes(keyword.toLowerCase()) ||
+                    remind.cumulative_kilometers.toString().includes(keyword) ||
+                    remind.name.toLowerCase().includes(keyword.toLowerCase()),
+            );
+
+            return results;
+        } catch (error) {
+            console.log('Error getting all GPS:', error);
+        }
     }
 }
 
