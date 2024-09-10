@@ -4,6 +4,7 @@ import { tables } from '../constants/tableName.constant';
 import redisModel from './redis.model';
 import { remindFeature } from 'notify-services';
 import scheduleUtils from '../utils/schedule.util';
+import reminder from '../utils/reminder.util';
 const INFINITY = 2147483647;
 
 class RemindModel extends DatabaseModel {
@@ -136,6 +137,7 @@ class RemindModel extends DatabaseModel {
                 remind_category_id: data?.remind_category_id,
                 cycle: data?.cycle ?? 0,
                 create_time: Date.now(),
+                user_id: data?.user?.userId,
             };
 
             const remind_id: any = await this.insert(
@@ -193,7 +195,6 @@ class RemindModel extends DatabaseModel {
             .join(',');
 
         const queryText = `INSERT INTO ${tables.tableRemindVehicle} (remind_id, vehicle_id, tire_seri) VALUES ${values}`;
-
         const result = await new Promise((resolve, reject) => {
             con.query(queryText, (err: any, result) => {
                 if (err) {
@@ -203,7 +204,6 @@ class RemindModel extends DatabaseModel {
                 }
             });
         });
-
         return result;
     }
 
@@ -259,14 +259,15 @@ class RemindModel extends DatabaseModel {
 
         const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
-        const { data } = await redisModel.hGetAll(
-            'remind',
-            'remind.model.ts',
-            Date.now(),
-        );
-        const reminds: any = isRedisReady ? Object.values(data) : result;
+        scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
 
         if (isRedisReady) {
+            const { data } = await redisModel.hGetAll(
+                'remind',
+                'remind.model.ts',
+                Date.now(),
+            );
+            const reminds: any = Object.values(data);
             const remindIndex = reminds.findIndex(
                 (remind: any) => remind.id === remindID,
             );
@@ -298,18 +299,37 @@ class RemindModel extends DatabaseModel {
         );
         const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
-        const { data } = await redisModel.hGetAll(
-            'remind',
-            'remind.model.ts',
-            Date.now(),
+        const results: any = await this.select(
+            con,
+            tables.tableRemind,
+            '*',
+            'id = ? AND is_notified = 0 AND is_deleted = 0 AND is_received = 0',
+            [remindID],
         );
-        const reminds: any = isRedisReady ? Object.values(data) : result;
+
+        const vehicles = await scheduleUtils.getVehiclesByRemindId(remindID);
+        const schedules: any = await scheduleUtils.buildSchedule(remindID);
+
+        const remind = {
+            ...results[0],
+            schedules: schedules,
+            vehicles: vehicles,
+        };
+
+        for (const schedule of schedules) {
+            await this.handleSchedule(schedule, remind, vehicles);
+        }
 
         if (isRedisReady) {
+            const { data } = await redisModel.hGetAll(
+                'remind',
+                'remind.model.ts',
+                Date.now(),
+            );
+            const reminds: any = isRedisReady ? Object.values(data) : result;
             const remindIndex = reminds.findIndex(
                 (remind: any) => remind.id === remindID,
             );
-
             if (remindIndex !== -1) {
                 let remind = JSON.parse(reminds[remindIndex]);
                 remind.is_notified = 0;
@@ -333,6 +353,7 @@ class RemindModel extends DatabaseModel {
         remindID: number,
         data: any,
     ) {
+        if (data.schedules === null || data.schedules.length === 0) return;
         const values = data?.schedules
             ?.map(
                 (schedule: any) =>
@@ -341,9 +362,7 @@ class RemindModel extends DatabaseModel {
                     }', ${Date.now()})`,
             )
             .join(',');
-
         const queryText = `INSERT INTO ${tables.tableRemindSchedule} (remind_id, start, end, time, create_time) VALUES ${values}`;
-
         await new Promise((resolve, reject) => {
             con.query(queryText, (err: any, result) => {
                 if (err) {
@@ -433,7 +452,7 @@ class RemindModel extends DatabaseModel {
 
     async search(con: PoolConnection, userID: number, query: any) {
         let params: any[] = [userID];
-        if(query.keyword === null) query.keyword = '';  
+        if (query.keyword === null) query.keyword = '';
         let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? ${
             query.vehicle_id
                 ? `AND ${tables.tableVehicleNoGPS}.license_plate = ${query.vehicle_id}`
@@ -539,6 +558,217 @@ class RemindModel extends DatabaseModel {
             }
         }
         return result;
+    }
+    async finishRemind(con: PoolConnection, remindID: number, user_id: number) {
+        //update current remind;
+        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        if (isRedisReady) {
+            const { data } = await redisModel.hGet(
+                'remind',
+                remindID.toString(),
+                'remind.models.ts',
+                Date.now(),
+            );
+            if (data !== null) {
+                let remindJson = JSON.parse(data);
+
+                remindJson.is_received = 1;
+                remindJson.complete_date = Date.now();
+
+                const remindUpdateRedis = redisModel.hSet(
+                    'remind',
+                    remindID.toString(),
+                    JSON.stringify(remindJson),
+                    'remind.models.ts',
+                    Date.now(),
+                );
+                // const deleteReids = redisModel.hDel(
+                //     'remind',
+                //     remindID.toString(),
+                //     'remind.models.ts',
+                //     Date.now(),
+                // )
+            }
+        }
+
+        const resultUpdate = await this.update(
+            con,
+            tables.tableRemind,
+            { is_received: 1, complete_date: Date.now() },
+            'id',
+            remindID,
+        );
+        //get data current remindF
+        let dataRemindRedis: any = null;
+        if (isRedisReady) {
+            dataRemindRedis = await redisModel.hGet(
+                'remind',
+                remindID.toString(),
+                'remind.models.ts',
+                Date.now(),
+            );
+        }
+        // const dataCurrentRemind: any =
+        //   dataRemindRedis !== null || dataRemindRedis !== ""
+        //     ? JSON.parse(dataRemindRedis)
+        //     : await this.select(con, tables.tableRemind, "*", "id", remindID);
+
+        const dataCurrentRemindmap: any =
+            dataRemindRedis ??
+            (await this.select(con, tables.tableRemind, '*', 'id = ?', [
+                remindID,
+            ]));
+        const dataCurrentRemind = dataCurrentRemindmap[0];
+        //create new exp date
+        const newExpDate =
+            dataCurrentRemind.expiration_time +
+            dataCurrentRemind.cycle * 30 * 24 * 60 * 60 * 1000;
+        //post new remind
+        // const newRemind = await this.insert(con, tables.tableRemind, {
+        //   img_url: dataCurrentRemind.img_url,
+        //   note_repair: dataCurrentRemind.note_repair,
+        //   history_repair: dataCurrentRemind.history_repair,
+        //   current_kilometers: dataCurrentRemind.current_kilometers,
+        //   cumulative_kilometers: dataCurrentRemind.cumulative_kilometers,
+        //   expiration_time: newExpDate,
+        //   km_before: dataCurrentRemind.km_before,
+        //   remind_category_id: dataCurrentRemind.remind_category_id,
+        //   is_notified: 0,
+        //   is_received: 0,
+        //   create_time: Date.now(),
+        //   cycle: dataCurrentRemind.cycle,
+        // });
+
+        //insert to schedule
+        const getSchedulebyID: any = await this.select(
+            con,
+            tables.tableRemindSchedule,
+            '*',
+            'remind_id = ?',
+            remindID as any,
+        );
+        const schedules = getSchedulebyID.map((s: any) => ({
+            ...s,
+            start:
+                s.start + dataCurrentRemind.cycle * (30 * 24 * 60 * 60) * 1000,
+            end: s.end + dataCurrentRemind.cycle * (30 * 24 * 60 * 60) * 1000,
+            time: s.time,
+        }));
+        const vehicle_id = await scheduleUtils.getVehiclesByRemindId(remindID);
+        //payload
+        const payload = {
+            remind_category_id: dataCurrentRemind.remind_category_id,
+            is_notified: 0,
+            note_repair: dataCurrentRemind.note_repair,
+            expiration_time: newExpDate,
+            cumulative_kilometers: dataCurrentRemind.cumulative_kilometers,
+            km_before: dataCurrentRemind.km_before,
+            schedules: schedules,
+            img_url: dataCurrentRemind.img_url,
+            history_repair: dataCurrentRemind.history_repair,
+            current_kilometers: dataCurrentRemind.current_kilometers,
+            is_received: 0,
+            create_time: Date.now(),
+            cycle: dataCurrentRemind.cycle,
+            user_id: user_id,
+            vehicles: vehicle_id,
+        };
+
+        const remind_id = await this.addRemind(con, payload);
+        // await this.insertRemindSchedule(con, remind_id as any, payload);
+
+        //insert new remind to redis
+        if (isRedisReady) {
+            const newRemindRedis = await redisModel.hSet(
+                'remind',
+                remind_id as any,
+                JSON.stringify(payload),
+                'remind.models.ts',
+                Date.now(),
+            );
+        }
+        return payload;
+    }
+    async getFinishRemind(
+        con: PoolConnection,
+        vehicle_id: string,
+        user_id: number,
+    ) {
+        const result = await this.selectWithJoins(
+            con,
+            tables.tableVehicleNoGPS,
+            `${tables.tableVehicleNoGPS}.license_plate AS license_plate,
+               ${tables.tableVehicleNoGPS}.user_id AS user_id,
+               ${tables.tableVehicleNoGPS}.license AS license,
+               ${tables.tableVehicleNoGPS}.create_time AS vehicle_create_time,
+               ${tables.tableVehicleNoGPS}.update_time AS vehicle_update_time,
+               
+               ${tables.tableRemind}.id AS remind_id,
+               ${tables.tableRemind}.img_url AS remind_img_url,
+               ${tables.tableRemind}.note_repair AS note_repair,
+               ${tables.tableRemind}.history_repair AS history_repair,
+               ${tables.tableRemind}.current_kilometers AS current_kilometers,
+               ${tables.tableRemind}.cumulative_kilometers AS cumulative_kilometers,
+               ${tables.tableRemind}.expiration_time AS expiration_time,
+               ${tables.tableRemind}.is_notified AS is_notified,
+               ${tables.tableRemind}.is_received AS is_received,
+               ${tables.tableRemind}.create_time AS remind_create_time,
+               ${tables.tableRemind}.update_time AS remind_update_time,
+               
+               ${tables.tableRemindCategory}.id AS remind_category_id,
+               ${tables.tableRemindCategory}.name AS category_name,
+               ${tables.tableRemindCategory}.desc AS category_desc,
+               ${tables.tableRemindCategory}.icon AS category_icon,
+               ${tables.tableRemindCategory}.create_time AS category_create_time,
+               ${tables.tableRemindCategory}.update_time AS category_update_time,
+               ${tables.tableRemindCategory}.is_deleted AS category_is_deleted`,
+            `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.license_plate = '${vehicle_id}'`,
+            user_id,
+            [
+                {
+                    table: tables.tableRemindVehicle,
+                    on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
+                    type: 'INNER',
+                },
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
+                    type: 'INNER',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
+                    type: 'INNER',
+                },
+            ],
+        );
+        return result;
+    }
+
+    async getAllGPS(query: any) {
+        try {
+            // search when query.keyword is not null
+            const { keyword, vehicle_id } = query;
+
+            let reminds: any = await reminder.getRemindsByVehicleId(vehicle_id);
+
+            if (!(typeof keyword === 'string' && keyword.trim() !== ''))
+                return reminds;
+            // search by keyword
+            const results = reminds.filter(
+                (remind: any) =>
+                    // toLowerCase() for case-insensitive search
+                    remind.note_repair
+                        .toLowerCase()
+                        .includes(keyword.toLowerCase()) ||
+                    remind.cumulative_kilometers.toString().includes(keyword) ||
+                    remind.name.toLowerCase().includes(keyword.toLowerCase()),
+            );
+
+            return results;
+        } catch (error) {
+            console.log('Error getting all GPS:', error);
+        }
     }
 }
 
