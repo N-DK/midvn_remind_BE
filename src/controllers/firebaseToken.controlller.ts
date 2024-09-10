@@ -7,7 +7,8 @@ class TokenFirebaseController {
     addFirebaseToken = catchAsync(async (req: Request, res: Response) => {
         const userId = req.body.user.userId;
         const data = req.body;
-        const addToken = await VehicleNoGPSService.addToken(data, userId);
+        const parentID = req.body.user.parentId;
+        const addToken = await VehicleNoGPSService.addToken(data, userId,parentID);
         CREATED(res, addToken);
     });
 

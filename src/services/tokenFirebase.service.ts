@@ -4,11 +4,11 @@ import TokenFirebase from '../models/firebaseToken.model';
 
 
 class TokenFirebaseService {
-    async addToken(data:any , userID: number){
+    async addToken(data:any , userID: number, parentId: number){
         try {
             const { conn } = await getConnection();
             try {
-                const result = await TokenFirebase.addToken(conn, data, userID);
+                const result = await TokenFirebase.addToken(conn, data, userID,parentId);
                 return result;
             } catch (error) {
                 throw error;

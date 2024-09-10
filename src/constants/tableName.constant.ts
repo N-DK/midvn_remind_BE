@@ -6,4 +6,5 @@ export const tables = {
     tableRemindVehicle: 'tbl_remind_vehicle',
     tableTokenFirebase: 'tbl_token_firebase',
     tableRemindSchedule: 'tbl_remind_schedule',
+    tableUser: 'tbl_user'
 };
