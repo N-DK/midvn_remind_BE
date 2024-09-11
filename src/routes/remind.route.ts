@@ -45,33 +45,32 @@ router.get(
 
 router.post(
     '/add-remind',
-    verifyToken,
-    reminder.upload.array('images', 5),
+    reminder.upload.array('images', 10),
     [
         body('remind_category_id', constants.VALIDATE_DATA).isNumeric(),
         body('is_notified', constants.VALIDATE_DATA).isNumeric(),
         body('note_repair', constants.NOT_EMPTY).isString(),
         body('expiration_time', constants.VALIDATE_DATA).isNumeric(),
-        // body('km_before', constants.VALIDATE_DATA).isNumeric(),
-        body('vehicles', constants.VALIDATE_DATA).isArray(),
-        body('schedules', constants.VALIDATE_DATA).isArray(),
     ],
+    verifyToken,
     remindController.addRemind,
 );
+
+router.get('/get-category-all', verifyToken, remindController.getCategoryAll);
 
 // search
 
 router.patch(
     '/update-notified-off/:id',
-    verifyToken,
     [param('id', constants.VALIDATE_DATA).isNumeric()],
+    verifyToken,
     remindController.updateNotifiedOff,
 );
 
 router.patch(
     '/update-notified-on/:id',
-    verifyToken,
     [param('id', constants.VALIDATE_DATA).isNumeric()],
+    verifyToken,
     remindController.updateNotifiedOn,
 );
 

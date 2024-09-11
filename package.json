@@ -12,6 +12,7 @@
     "author": "NDK",
     "license": "ISC",
     "dependencies": {
+        "app-root-path": "^3.1.0",
         "axios": "^1.7.3",
         "compression": "^1.7.4",
         "cors": "^2.8.5",

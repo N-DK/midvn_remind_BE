@@ -202,6 +202,19 @@ class RemindService {
             throw error;
         }
     }
+
+    async getCategoryAll(userId: any) {
+        try {
+            try {
+                const result = await remindModel.getCategoryAll(userId);
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindService();

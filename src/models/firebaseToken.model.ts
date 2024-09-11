@@ -8,7 +8,12 @@ class TokenFirebase extends DatabaseModel {
         super();
     }
 
-    async addToken(conn: PoolConnection, data: any, userID: number,parentID: number){
+    async addToken(
+        conn: PoolConnection,
+        data: any,
+        userID: number,
+        parentID: number,
+    ) {
         const tokenIsExist: any = await this.select(
             conn,
             tables.tableTokenFirebase,
@@ -16,7 +21,7 @@ class TokenFirebase extends DatabaseModel {
             'token = ?',
             [data.token],
         );
-        console.log(tokenIsExist);
+        // console.log(tokenIsExist);
         if (tokenIsExist && tokenIsExist.length > 0) {
             throw new BusinessLogicError(
                 'Token đã tồn tại',
@@ -29,14 +34,10 @@ class TokenFirebase extends DatabaseModel {
             token: data.token,
             created_at: Date.now(),
         });
-        const addToUser = await this.insert(
-            conn,
-            tables.tableUser,
-            {
-                user_id: userID,
-                parent_id: parentID,
-            },
-        )
+        const addToUser = await this.insert(conn, tables.tableUser, {
+            user_id: userID,
+            parent_id: parentID,
+        });
         return result;
     }
 

@@ -7,12 +7,9 @@ import { getConnection } from '../dbs/init.mysql';
 import { tables } from '../constants/tableName.constant';
 import { PoolConnection } from 'mysql2';
 import remindModel from '../models/remind.model';
+import configureEnvironment from '../config/dotenv.config';
 
-// let schedules: {
-//     remind: any;
-//     schedule: { start: Date; end: Date; time: string };
-// }[] = [];
-
+const { SV_NOTIFY } = configureEnvironment();
 let reminds: any[] = [];
 const cronJobs = new Map<string, ScheduledTask>();
 
@@ -72,16 +69,6 @@ class ScheduleUtils {
         const { remind_id, id, ...other } = remind;
         const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
-        // if (isRedisReady) {
-        //     const { data } = await this.getRemindFromRedis();
-
-        //     schedules = Object.values(data).filter((item: any) => {
-        //         item = JSON.parse(item);
-
-        //         return item.remind_id === remind.remind_id;
-        //     });
-        // }
-
         // console.log('other', other);
         // console.log('schedule', remind.schedules);
 
@@ -105,15 +92,12 @@ class ScheduleUtils {
                             end: s.end + remind.cycle * this.UNIT_MONTH * 1000,
                         })),
                     });
-                    await remindFeature.sendNotifyRemind(
-                        'http://localhost:3007',
-                        {
-                            name_remind:
-                                'Hạn bảo dưỡng ' + remind.note_repair + ' NDK',
-                            vehicle_name: 'Xe ' + remind.vehicles.join(', '),
-                            user_id: remind.user_id,
-                        },
-                    );
+                    await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
+                        name_remind:
+                            'Hạn bảo dưỡng ' + remind.note_repair + ' NDK',
+                        vehicle_name: 'Xe ' + remind.vehicles.join(', '),
+                        user_id: remind.user_id,
+                    });
                 } catch (error) {
                     console.error(
                         'Error sending reminder notification:',
@@ -122,29 +106,17 @@ class ScheduleUtils {
                 } finally {
                     // cronJob.stop();
                     // console.log('cronJobs before', cronJobs.size);
-
                     this.destroyAllCronJobByRemindId(remind.id, 'schedule');
                     this.destroyAllCronJobByRemindId(remind.id, 'expire');
-
                     // console.log('cronJobs after', cronJobs.size);
 
                     if (isRedisReady) {
-                        // const { data } = await this.getRemindFromRedis();
-
-                        // const key = Object.keys(data).find((key: any) => {
-                        //     const item = JSON.parse(data[key]);
-
-                        //     return item.id === remind.id;
-                        // });
-                        // console.log('key', remind.id);
                         const result = await redisModel.hDel(
                             'remind',
                             remind.id.toString(),
                             'schedule.utils.ts',
                             Date.now(),
                         );
-
-                        // console.log('result', result);
                     } else {
                         await this.databaseModel.update(
                             this.conn,
@@ -166,7 +138,7 @@ class ScheduleUtils {
         if (!reminds?.length) return;
 
         for (const remind of reminds) {
-            for (const schedule of remind.schedules) {
+            for (const schedule of remind?.schedules ?? []) {
                 const cronJob = this.createCronJob(
                     {
                         start: new Date(schedule.start),
@@ -176,7 +148,7 @@ class ScheduleUtils {
                     remind,
                     async () => {
                         await remindFeature.sendNotifyRemind(
-                            'http://localhost:3007',
+                            SV_NOTIFY as string,
                             {
                                 name_remind:
                                     'Gia hạn bảo dưỡng ' + remind.note_repair,
@@ -304,10 +276,6 @@ class ScheduleUtils {
             console.error('Error loading schedules:', error);
         }
     }
-    // const remind = reminds.find((item) => item.id === remind_id);
-    // return remind?.schedules.some(
-    //     (schedule: any) => job.getStatus() === `*/${schedule.time} * * * *`, // Thay thế cho job.cron?.source
-    // );
 
     public async destroyAllCronJobByRemindId(remind_id: any, type: string) {
         cronJobs.forEach((job, key) => {
@@ -317,38 +285,25 @@ class ScheduleUtils {
                 cronJobs.delete(key);
             }
         });
-
-        // console.log('cronJobs', cronJobs.size);
-
-        // const cronJobs = Array.from(cron.getTasks()).filter(([_, job]) => {
-        //     console.log('job', job);
-        // });
-
-        // cronJobs.forEach(([_, job]: [string, ScheduledTask]) => job.stop());
     }
 
     public async getVehiclesByRemindId(remind_id: any) {
         const vehicles: any = await this.databaseModel.selectWithJoins(
             this.conn,
-            tables.tableVehicleNoGPS,
+            tables.tableRemind,
             '*',
             `remind_id = ${remind_id}`,
             [],
             [
                 {
                     table: tables.tableRemindVehicle,
-                    on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-                    type: 'LEFT',
-                },
-                {
-                    table: tables.tableRemind,
                     on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
                     type: 'LEFT',
                 },
             ],
         );
 
-        return vehicles.map((v: any) => v.license_plate);
+        return vehicles.map((v: any) => v.vehicle_id);
     }
 
     public async buildSchedule(remindId: any) {

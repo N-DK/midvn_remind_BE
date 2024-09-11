@@ -219,7 +219,7 @@ class DatabaseModel {
         return await new Promise((resolve, reject) => {
             const query = `DELETE FROM ${tableName} WHERE ${where}`;
 
-            console.log(query);
+            // console.log(query);
 
             db.query(query, conditions, (err, dataRes: any) => {
                 if (err) {
@@ -299,19 +299,22 @@ class DatabaseModel {
                 })
                 .join(' ');
             const query = `SELECT ${fields} FROM ${mainTable} ${joinClauses} WHERE ${where} ${orderBy}`;
-            db.query(
-                query,
-                conditions,
-                (err: QueryError | null, dataRes: QueryResult) => {
-                    if (err) {
-                        console.log(err);
-                        return reject({
-                            msg: 'Error occurred while querying the database.',
-                        });
-                    }
-                    return resolve(dataRes);
-                },
-            );
+
+            if (db) {
+                db.query(
+                    query,
+                    conditions,
+                    (err: QueryError | null, dataRes: QueryResult) => {
+                        if (err) {
+                            console.log(err);
+                            return reject({
+                                msg: 'Error occurred while querying the database.',
+                            });
+                        }
+                        return resolve(dataRes);
+                    },
+                );
+            }
         });
     }
 }

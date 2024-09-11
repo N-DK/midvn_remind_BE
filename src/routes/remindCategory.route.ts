@@ -5,22 +5,29 @@ import remindCategoryController from '../controllers/remindCategory.controller';
 import { verifyToken } from '../middlewares/verifyToken.middleware';
 const router: Router = express.Router();
 
-router.get('/get-all', remindCategoryController.getAllRows);
+router.get('/get-all', verifyToken, remindCategoryController.getAllRows);
 
-router.get('/get-all/by-user',verifyToken ,remindCategoryController.getByUserId);
-
-router.post('/add', 
-    [body("name", constants.NOT_EMPTY)
-      .isString()
-      .withMessage(constants.VALIDATE_DATA),
-    body("desc", constants.NOT_EMPTY)
-      .isString()
-      .withMessage(constants.VALIDATE_DATA),
-    body("icon", constants.NOT_EMPTY)
-      .isString()
-      .withMessage(constants.VALIDATE_DATA)],
+router.get(
+    '/get-all/by-user',
     verifyToken,
-    remindCategoryController.addCategory
+    remindCategoryController.getByUserId,
+);
+
+router.post(
+    '/add',
+    [
+        body('name', constants.NOT_EMPTY)
+            .isString()
+            .withMessage(constants.VALIDATE_DATA),
+        body('desc', constants.NOT_EMPTY)
+            .isString()
+            .withMessage(constants.VALIDATE_DATA),
+        body('icon', constants.NOT_EMPTY)
+            .isString()
+            .withMessage(constants.VALIDATE_DATA),
+    ],
+    verifyToken,
+    remindCategoryController.addCategory,
 );
 
 export default (app: Express) => {
