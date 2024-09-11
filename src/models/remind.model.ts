@@ -162,7 +162,6 @@ class RemindModel extends DatabaseModel {
         create_time: Date.now(),
         user_id: data?.user?.userId,
       };
-
       const remind_id: any = await this.insert(
         con,
         tables.tableRemind,
@@ -591,6 +590,7 @@ class RemindModel extends DatabaseModel {
   async finishRemind(con: PoolConnection, remindID: number, user_id: number) {
     //update current remind;
     const isRedisReady = redisModel.redis.instanceConnect.isReady;
+    let remind: any;
     if (isRedisReady) {
       const { data } = await redisModel.hGet(
         "remind",
@@ -600,6 +600,7 @@ class RemindModel extends DatabaseModel {
       );
       if (data !== null) {
         let remindJson = JSON.parse(data);
+        remind = remindJson;
 
         remindJson.is_received = 1;
         remindJson.complete_date = Date.now();
@@ -618,6 +619,14 @@ class RemindModel extends DatabaseModel {
         //     Date.now(),
         // )
       }
+    } else {
+      remind = (
+        (await this.select(con, tables.tableRemind, "*", "id = ?", [
+          remindID,
+        ])) as any
+      )[0];
+      remind.is_received = 1;
+      remind.complete_date = Date.now();
     }
 
     const resultUpdate = await this.update(
@@ -637,34 +646,19 @@ class RemindModel extends DatabaseModel {
         Date.now()
       );
     }
-    // const dataCurrentRemind: any =
-    //   dataRemindRedis !== null || dataRemindRedis !== ""
-    //     ? JSON.parse(dataRemindRedis)
-    //     : await this.select(con, tables.tableRemind, "*", "id", remindID);
 
-    const dataCurrentRemindmap: any =
-      dataRemindRedis ??
-      (await this.select(con, tables.tableRemind, "*", "id = ?", [remindID]));
-    const dataCurrentRemind = dataCurrentRemindmap[0];
-    //create new exp date
+    const dataCurrentRemindmap: any = await this.select(
+      con,
+      tables.tableRemind,
+      "*",
+      "id = ?",
+      [remindID]
+    );
+    let dataCurrentRemind = dataCurrentRemindmap[0];
+    console.log(dataCurrentRemind);
     const newExpDate =
       dataCurrentRemind.expiration_time +
       dataCurrentRemind.cycle * 30 * 24 * 60 * 60 * 1000;
-    //post new remind
-    // const newRemind = await this.insert(con, tables.tableRemind, {
-    //   img_url: dataCurrentRemind.img_url,
-    //   note_repair: dataCurrentRemind.note_repair,
-    //   history_repair: dataCurrentRemind.history_repair,
-    //   current_kilometers: dataCurrentRemind.current_kilometers,
-    //   cumulative_kilometers: dataCurrentRemind.cumulative_kilometers,
-    //   expiration_time: newExpDate,
-    //   km_before: dataCurrentRemind.km_before,
-    //   remind_category_id: dataCurrentRemind.remind_category_id,
-    //   is_notified: 0,
-    //   is_received: 0,
-    //   create_time: Date.now(),
-    //   cycle: dataCurrentRemind.cycle,
-    // });
 
     //insert to schedule
     const getSchedulebyID: any = await this.select(
@@ -696,7 +690,7 @@ class RemindModel extends DatabaseModel {
       is_received: 0,
       create_time: Date.now(),
       cycle: dataCurrentRemind.cycle,
-      user_id: user_id,
+      user: { userId: user_id },
       vehicles: vehicle_id,
     };
 
@@ -713,6 +707,8 @@ class RemindModel extends DatabaseModel {
         Date.now()
       );
     }
+    scheduleUtils.destroyAllCronJobByRemindId(remind_id, "schedule");
+    scheduleUtils.destroyAllCronJobByRemindId(remind_id, "expire");
     return payload;
   }
   async getFinishRemind(
@@ -722,13 +718,8 @@ class RemindModel extends DatabaseModel {
   ) {
     const result = await this.selectWithJoins(
       con,
-      tables.tableVehicleNoGPS,
-      `${tables.tableVehicleNoGPS}.license_plate AS license_plate,
-               ${tables.tableVehicleNoGPS}.user_id AS user_id,
-               ${tables.tableVehicleNoGPS}.license AS license,
-               ${tables.tableVehicleNoGPS}.create_time AS vehicle_create_time,
-               ${tables.tableVehicleNoGPS}.update_time AS vehicle_update_time,
-               
+      tables.tableRemindVehicle,
+      ` 
                ${tables.tableRemind}.id AS remind_id,
                ${tables.tableRemind}.img_url AS remind_img_url,
                ${tables.tableRemind}.note_repair AS note_repair,
@@ -748,14 +739,9 @@ class RemindModel extends DatabaseModel {
                ${tables.tableRemindCategory}.create_time AS category_create_time,
                ${tables.tableRemindCategory}.update_time AS category_update_time,
                ${tables.tableRemindCategory}.is_deleted AS category_is_deleted`,
-      `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.license_plate = '${vehicle_id}'`,
-      user_id,
+      `${tables.tableRemind}.is_received = ? AND ${tables.tableRemindVehicle}.vehicle_id = ${vehicle_id}`,
+      "1",
       [
-        {
-          table: tables.tableRemindVehicle,
-          on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-          type: "INNER",
-        },
         {
           table: tables.tableRemind,
           on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
