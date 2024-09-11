@@ -20,6 +20,11 @@ class RemindController {
 
     addRemind = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
+            if (Array.isArray(req.files) && req.files.length > 0) {
+                req.body.img_url = req.files
+                    .map((file) => `uploads/${file.filename}`)
+                    .join(',');
+            }
             const data = req.body;
             const remind = await remindService.addRemind(data);
             CREATED(res, remind);
@@ -74,7 +79,9 @@ class RemindController {
         async (req: Request, res: Response, Next: NextFunction) => {
             const result = await remindService.finishRemind(
                 parseInt(req.params.id),
-                req.body.user.parentId ?? req.body.user.userId,
+                req.body?.user?.level === 10
+                    ? req.body.user.userId
+                    : req.body.user.parentId,
             );
             UPDATE(res, result);
         },

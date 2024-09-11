@@ -131,20 +131,21 @@ class RemindModel extends DatabaseModel {
     }
 
     async addRemind(con: PoolConnection, data: any) {
-        const token =
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjI4LCJwYXJlbnRJZCI6MjcsImNsaWVudElkIjoiOTNhMjg2MzYtYWEzZi00MWRkLTkxMmMtNDRlOWVhOTQxMjUxIiwicm9sZSI6NTAsImxldmVsIjoxMCwiY3VzdG9tZXJJZCI6MjYsImlhdCI6MTcyNTk2NTk3NCwiZXhwIjoxNzI4NTU3OTc0fQ.pQOycXQ2zJRlzEkJHCIGHLJJR6Gj8AHS7Xv7foXC04U';
-
-        const currentKilometers = await this.getCurrentKilometersByVehicleId(
-            data?.vehicles[0],
-            token,
-        );
+        if (data?.token) {
+            const currentKilometers =
+                await this.getCurrentKilometersByVehicleId(
+                    data?.vehicles[0],
+                    data?.token,
+                );
+            data.current_kilometers = currentKilometers;
+        }
 
         try {
             const payload = {
                 img_url: data?.img_url ?? null,
                 note_repair: data?.note_repair ?? null,
                 history_repair: data?.history_repair ?? null,
-                current_kilometers: currentKilometers,
+                current_kilometers: data?.current_kilometers ?? 0,
                 cumulative_kilometers: data?.cumulative_kilometers ?? 0,
                 expiration_time: data?.expiration_time ?? 0,
                 is_deleted: 0,
@@ -154,7 +155,10 @@ class RemindModel extends DatabaseModel {
                 remind_category_id: data?.remind_category_id,
                 cycle: data?.cycle ?? 0,
                 create_time: Date.now(),
-                user_id: data?.user?.parentId ?? data?.user?.userId,
+                user_id:
+                    data?.user?.level === 10
+                        ? data?.user?.userId
+                        : data?.user?.parentId, // 10 là đại lý
             };
 
             const remind_id: any = await this.insert(
@@ -207,7 +211,7 @@ class RemindModel extends DatabaseModel {
         const values = vehicles
             ?.map(
                 (vehicle: any) =>
-                    `(${remind_id}, '${vehicle}', '${tire_seri ?? null}')`,
+                    `(${remind_id}, '${vehicle}', ${tire_seri ?? null})`,
             )
             .join(',');
 
@@ -704,6 +708,7 @@ class RemindModel extends DatabaseModel {
                 Date.now(),
             );
         }
+
         return payload;
     }
     async getFinishRemind(

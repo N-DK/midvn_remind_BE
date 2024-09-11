@@ -1,28 +1,35 @@
 import { PoolConnection } from 'mysql2';
-import cron, { schedule } from 'node-cron';
 import DatabaseModel from '../models/database.model';
-import { remindFeature } from 'notify-services';
 import { getConnection } from '../dbs/init.mysql';
-import GPSApi from '../api/GPS.api';
 import { tables } from '../constants/tableName.constant';
-import redisModel from '../models/redis.model';
-import scheduleUtls from './schedule.util';
+import multer from 'multer';
+import path from 'path';
 
 const dataBaseModel = new DatabaseModel();
 
 let connection: PoolConnection;
+let storage: any;
 
 const reminder = {
     init: async () => {
         const { conn } = await getConnection();
         connection = conn;
+        // Cấu hình lưu trữ file
+        storage = multer.diskStorage({
+            destination: (req, file, cb) => {
+                cb(null, 'uploads/'); // Thư mục lưu trữ file
+            },
+            filename: (req, file, cb) => {
+                cb(null, Date.now() + path.extname(file.originalname)); // Đặt tên file
+            },
+        });
     },
     getRemindsByVehicleId: async (vehicleId: string) => {
         const results: any = await dataBaseModel.selectWithJoins(
             connection,
             tables.tableRemindVehicle,
             `${tables.tableRemindCategory}.*, ${tables.tableRemindVehicle}.*, ${tables.tableRemind}.*`,
-            'vehicle_id = ?',
+            'vehicle_id = ? AND is_notified = 0 AND is_received = 0',
             [vehicleId],
             [
                 {
@@ -40,6 +47,24 @@ const reminder = {
 
         return results;
     },
+    // Cấu hình upload
+    upload: multer({
+        storage: storage,
+        limits: { fileSize: 1024 * 1024 * 5 }, // Giới hạn kích thước file 5MB
+        fileFilter: (req, file, cb) => {
+            const filetypes = /jpeg|jpg|png|gif/;
+            const extname = filetypes.test(
+                path.extname(file.originalname).toLowerCase(),
+            );
+            const mimetype = filetypes.test(file.mimetype);
+
+            if (mimetype && extname) {
+                return cb(null, true);
+            } else {
+                cb(new Error('Only images are allowed!'));
+            }
+        },
+    }),
 };
 
 export default reminder;

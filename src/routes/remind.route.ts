@@ -3,6 +3,7 @@ import { body, query, param } from 'express-validator';
 import constants from '../constants/msg.constant';
 import { verifyToken } from '../middlewares/verifyToken.middleware';
 import remindController from '../controllers/remind.controller';
+import reminder from '../utils/reminder.util';
 
 const router: Router = express.Router();
 
@@ -45,6 +46,7 @@ router.get(
 router.post(
     '/add-remind',
     verifyToken,
+    reminder.upload.array('images', 5),
     [
         body('remind_category_id', constants.VALIDATE_DATA).isNumeric(),
         body('is_notified', constants.VALIDATE_DATA).isNumeric(),
@@ -115,18 +117,14 @@ router.put(
 // no ==> is_received = 1, update_time = Date.now() return {}
 router.post(
     '/finish-remind/:id',
-    [
-        param('id', constants.VALIDATE_DATA).isNumeric(),
-    ],
+    [param('id', constants.VALIDATE_DATA).isNumeric()],
     verifyToken,
     remindController.finishRemind,
 );
 
 router.get(
     '/get-finish-remind/:id',
-    [
-        param('id', constants.VALIDATE_DATA)
-    ],
+    [param('id', constants.VALIDATE_DATA)],
     verifyToken,
     remindController.getFinishRemind,
 );
