@@ -289,6 +289,7 @@ class DatabaseModel {
             on: string;
             type?: 'LEFT' | 'INNER' | 'RIGHT';
         }[] = [],
+        orderBy: string = '',
     ) {
         return await new Promise((resolve, reject) => {
             const joinClauses = joins
@@ -297,8 +298,7 @@ class DatabaseModel {
                     return `${joinType} ${join.table} ON ${join.on}`;
                 })
                 .join(' ');
-
-            const query = `SELECT ${fields} FROM ${mainTable} ${joinClauses} WHERE ${where}`;
+            const query = `SELECT ${fields} FROM ${mainTable} ${joinClauses} WHERE ${where} ${orderBy}`;
             db.query(
                 query,
                 conditions,

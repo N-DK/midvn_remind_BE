@@ -138,7 +138,7 @@ class VehicleNoGPS extends DatabaseModel {
           on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
           type: "INNER",
         },
-      ]
+      ],
     );
     return result;
   }
