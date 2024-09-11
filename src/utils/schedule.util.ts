@@ -85,7 +85,7 @@ class ScheduleUtils {
         // console.log('other', other);
         // console.log('schedule', remind.schedules);
 
-        console.table({ remind: remind.id, month, day });
+        // console.table({ remind: remind.id, month, day });
 
         const cronJob = cron.schedule(
             `*/20 8-20 ${day} ${month} *`, // */20 8-20
