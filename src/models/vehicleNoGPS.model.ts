@@ -1,99 +1,106 @@
-import { PoolConnection } from "mysql2";
-import { tables } from "../constants/tableName.constant";
-import DatabaseModel from "./database.model";
-import { BusinessLogicError } from "../core/error.response";
-import { StatusCodes } from "../core/httpStatusCode";
+import { PoolConnection } from 'mysql2';
+import { tables } from '../constants/tableName.constant';
+import DatabaseModel from './database.model';
+import { BusinessLogicError } from '../core/error.response';
+import { StatusCodes } from '../core/httpStatusCode';
 
 class VehicleNoGPS extends DatabaseModel {
-  constructor() {
-    super();
-  }
-
-  async getAllRowsByUserID(con: PoolConnection, userID: number) {
-    const result = await this.select(
-      con,
-      tables.tableVehicleNoGPS,
-      "id, license_plate, user_id, license",
-      "user_id = ? AND is_deleted = 0",
-      [userID]
-    );
-    return result;
-  }
-
-  async getVehicleNoGPSbyID(con: PoolConnection, vehicleId: number) {
-    const result = await this.select(
-      con,
-      tables.tableVehicleNoGPS,
-      "id,license_plate, user_id, license",
-      "id = ? AND is_deleted = 0",
-      [vehicleId]
-    );
-    return result;
-  }
-
-  async addVehicleNoGPS(con: PoolConnection, data: any, userID: number) {
-    let queryText = `INSERT INTO ${tables.tableVehicleNoGPS} (license_plate, user_id, license, create_time, update_time,user_name,user_address) VALUES `;
-
-    data.forEach((item: any) => {
-      queryText += `('${item.license_plate}', ${userID}, '${item.license}', ${Date.now()}, NULL, '${item.user_name}', '${item.user_address}'),`;
-    });
-    
-    // Loại bỏ dấu phẩy cuối cùng để đảm bảo cú pháp SQL hợp lệ
-    queryText = queryText.slice(0, -1);
-    
-    
-    return new Promise((resolve, reject) => {
-      con.query(queryText, (err: any, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      });
-    });
-  }
-
-  async updateVehicleNoGPS(con: PoolConnection, data: any, vehicleID: number) {
-    const result = await this.update(
-      con,
-      tables.tableVehicleNoGPS,
-      {
-        license_plate: data.license_plate,
-        license: data.license,
-        update_time: Date.now(),
-      },
-      "id",
-      vehicleID
-    );
-    return result;
-  }
-  async deleteVehicleNoGPS(
-    con: PoolConnection,
-    user_id: number,
-    vehicleID: number
-  ) {
-    const check: any = await this.getVehicleNoGPSbyID(con, vehicleID);
-    if (check[0].user_id !== user_id) {
-      throw new BusinessLogicError(
-        "Đã xảy ra lỗi",
-        ["Không được phép" as never],
-        StatusCodes.FORBIDDEN
-      );
+    constructor() {
+        super();
     }
-    const result = await this.update(
-      con,
-      tables.tableVehicleNoGPS,
-      { is_deleted: 1 },
-      "id",
-      vehicleID
-    );
-    return result;
-  }
-  async search(con: PoolConnection, data: any, user_id: number) {
-    const result = await this.selectWithJoins(
-      con,
-      tables.tableVehicleNoGPS,
-      `${tables.tableVehicleNoGPS}.license_plate AS license_plate,
+
+    async getAllRowsByUserID(con: PoolConnection, userID: number) {
+        const result = await this.select(
+            con,
+            tables.tableVehicleNoGPS,
+            'id, license_plate, user_id, license',
+            'user_id = ? AND is_deleted = 0',
+            [userID],
+        );
+        return result;
+    }
+
+    async getVehicleNoGPSbyID(con: PoolConnection, vehicleId: number) {
+        const result = await this.select(
+            con,
+            tables.tableVehicleNoGPS,
+            'id,license_plate, user_id, license',
+            'id = ? AND is_deleted = 0',
+            [vehicleId],
+        );
+        return result;
+    }
+
+    async addVehicleNoGPS(con: PoolConnection, data: any, userID: number) {
+        let queryText = `INSERT INTO ${tables.tableVehicleNoGPS} (license_plate, user_id, license, create_time, update_time,user_name,user_address) VALUES `;
+
+        data.forEach((item: any) => {
+            queryText += `('${item.license_plate}', ${userID}, '${
+                item.license
+            }', ${Date.now()}, NULL, '${item.user_name}', '${
+                item.user_address
+            }'),`;
+        });
+
+        // Loại bỏ dấu phẩy cuối cùng để đảm bảo cú pháp SQL hợp lệ
+        queryText = queryText.slice(0, -1);
+
+        return new Promise((resolve, reject) => {
+            con.query(queryText, (err: any, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+    }
+
+    async updateVehicleNoGPS(
+        con: PoolConnection,
+        data: any,
+        vehicleID: number,
+    ) {
+        const result = await this.update(
+            con,
+            tables.tableVehicleNoGPS,
+            {
+                license_plate: data.license_plate,
+                license: data.license,
+                update_time: Date.now(),
+            },
+            'id',
+            vehicleID,
+        );
+        return result;
+    }
+    async deleteVehicleNoGPS(
+        con: PoolConnection,
+        user_id: number,
+        vehicleID: number,
+    ) {
+        const check: any = await this.getVehicleNoGPSbyID(con, vehicleID);
+        if (check[0].user_id !== user_id) {
+            throw new BusinessLogicError(
+                'Đã xảy ra lỗi',
+                ['Không được phép' as never],
+                StatusCodes.FORBIDDEN,
+            );
+        }
+        const result = await this.update(
+            con,
+            tables.tableVehicleNoGPS,
+            { is_deleted: 1 },
+            'id',
+            vehicleID,
+        );
+        return result;
+    }
+    async search(con: PoolConnection, data: any, user_id: number) {
+        const result = await this.selectWithJoins(
+            con,
+            tables.tableVehicleNoGPS,
+            `${tables.tableVehicleNoGPS}.license_plate AS license_plate,
                  ${tables.tableVehicleNoGPS}.user_id AS user_id,
                  ${tables.tableVehicleNoGPS}.license AS license,
                  ${tables.tableVehicleNoGPS}.create_time AS vehicle_create_time,
@@ -120,28 +127,28 @@ class VehicleNoGPS extends DatabaseModel {
                  ${tables.tableRemindCategory}.update_time AS category_update_time,
                  ${tables.tableRemindCategory}.is_deleted AS category_is_deleted`,
 
-      `${tables.tableVehicleNoGPS}.user_id = ? AND (${tables.tableVehicleNoGPS}.license_plate LIKE '%${data.keyword}%' OR ${tables.tableVehicleNoGPS}.license LIKE '%${data.keyword}%') AND ${tables.tableVehicleNoGPS}.is_deleted = 0`,
-      [user_id],
-      [
-        {
-          table: tables.tableRemindVehicle,
-          on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-          type: "INNER",
-        },
-        {
-          table: tables.tableRemind,
-          on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
-          type: "INNER",
-        },
-        {
-          table: tables.tableRemindCategory,
-          on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
-          type: "INNER",
-        },
-      ]
-    );
-    return result;
-  }
+            `${tables.tableVehicleNoGPS}.user_id = ? AND (${tables.tableVehicleNoGPS}.license_plate LIKE '%${data.keyword}%' OR ${tables.tableVehicleNoGPS}.license LIKE '%${data.keyword}%') AND ${tables.tableVehicleNoGPS}.is_deleted = 0`,
+            [user_id],
+            [
+                {
+                    table: tables.tableRemindVehicle,
+                    on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
+                    type: 'INNER',
+                },
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
+                    type: 'INNER',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
+                    type: 'INNER',
+                },
+            ],
+        );
+        return result;
+    }
 }
 
 export default new VehicleNoGPS();
