@@ -6,42 +6,25 @@ import configureEnvironment from '../../../config/dotenv.config';
 
 const { SV_NOTIFY } = configureEnvironment();
 
-let reminds: any = [];
-
 const remindFeature = async (client: any, data: any, requestId: any) => {
     const isRedisReady = redisModel.redis.instanceConnect.isReady;
+    let reminds: any = [];
 
     try {
         if (!data || !Object.keys(data).length) return;
 
-        // Kiểm tra cache trong Redis
-        const cacheKey = `reminds:${data.imei}`;
         if (isRedisReady) {
-            const { data } = await redisModel.get(
-                cacheKey,
-                'remindFeature',
-                requestId,
-            );
-            if (data) {
-                reminds = JSON.parse(data);
-            }
+            reminds =
+                (await reminder.groupVehiclesWithObjects(data.imei)) ?? [];
         }
 
-        // Nếu không có trong Redis, gọi database
-        if (!reminds) {
-            reminds = await reminder.getRemindsByVehicleId(data.imei);
-            if (isRedisReady && reminds.length > 0) {
-                await redisModel.setWithExpired(
-                    cacheKey,
-                    JSON.stringify(reminds),
-                    60 * 10,
-                    'remindFeature',
-                    requestId,
-                );
-            }
+        if (reminds.length === 0) {
+            const result = await reminder.getReminds();
+            reminds = result[data.imei] ?? [];
         }
 
         if (reminds.length > 0) {
+            console.log(`${data.vehicle_name} - ${reminds.length}`);
             for (const remind of reminds) {
                 const isOverKm =
                     data.total_distance >=
@@ -59,7 +42,7 @@ const remindFeature = async (client: any, data: any, requestId: any) => {
             }
         }
     } catch (error) {
-        console.log(error);
+        console.log('Error', error);
         mylogger.error('message', ['nameFeature', requestId, error]);
     }
 };

@@ -16,22 +16,24 @@ class RemindModel extends DatabaseModel {
     }
 
     async getAll(con: PoolConnection, userID: number) {
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
-        if (isRedisReady) {
-            const { data } = await redisModel.hGetAll(
-                'remind',
-                'remind.model.ts',
-                Date.now(),
-            );
+        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        // if (isRedisReady) {
+        //     const { data } = await redisModel.hGetAll(
+        //         'remind',
+        //         'remind.model.ts',
+        //         Date.now(),
+        //     );
 
-            // filter reminds by user_id and is_deleted = 0
-            const reminds: any = Object.values(data).filter(
-                (remind: any) =>
-                    JSON.parse(remind).user_id === userID &&
-                    JSON.parse(remind).is_deleted === 0,
-            );
-            return reminds;
-        }
+        //     // filter reminds by user_id and is_deleted = 0
+        //     const reminds: any = Object.values(data)
+        //         .filter(
+        //             (remind: any) =>
+        //                 JSON.parse(remind).user_id === userID &&
+        //                 JSON.parse(remind).is_deleted === 0,
+        //         )
+        //         .map((item: any) => JSON.parse(item));
+        //     return reminds;
+        // }
 
         const result = await this.selectWithJoins(
             con,
@@ -99,22 +101,24 @@ class RemindModel extends DatabaseModel {
     }
 
     async getByVehicleId(con: PoolConnection, vehicleID: string) {
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
-        if (isRedisReady) {
-            const { data } = await redisModel.hGetAll(
-                'remind',
-                'remind.model.ts',
-                Date.now(),
-            );
-            const reminds: any = Object.values(data).filter((remind: any) => {
-                remind = JSON.parse(remind);
-                return (
-                    remind.vehicles.includes(vehicleID) &&
-                    remind.is_deleted === 0
-                );
-            });
-            return reminds;
-        }
+        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        // if (isRedisReady) {
+        //     const { data } = await redisModel.hGetAll(
+        //         'remind',
+        //         'remind.model.ts',
+        //         Date.now(),
+        //     );
+        //     const reminds: any = Object.values(data)
+        //         .filter((remind: any) => {
+        //             remind = JSON.parse(remind);
+        //             return (
+        //                 remind.vehicles.includes(vehicleID) &&
+        //                 remind.is_deleted === 0
+        //             );
+        //         })
+        //         .map((item: any) => JSON.parse(item));
+        //     return reminds;
+        // }
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
@@ -198,6 +202,8 @@ class RemindModel extends DatabaseModel {
             data.current_kilometers = currentKilometers;
         }
 
+        console.log('data.user', data.user);
+
         try {
             const payload = {
                 img_url: data?.img_url ?? null,
@@ -207,7 +213,7 @@ class RemindModel extends DatabaseModel {
                 cumulative_kilometers: data?.cumulative_kilometers ?? 0,
                 expiration_time: parseInt(data?.expiration_time ?? 0),
                 is_deleted: 0,
-                km_before: data?.km_before ?? 0,
+                km_before: parseInt(data?.km_before) ?? 0,
                 is_notified: parseInt(data?.is_notified ?? 0),
                 is_received: parseInt(data?.is_received ?? 0),
                 remind_category_id: parseInt(data?.remind_category_id),
@@ -319,8 +325,6 @@ class RemindModel extends DatabaseModel {
                 time: schedule.time,
             },
             async () => {
-                console.log('LINE 286 ==>', remind.user_id);
-
                 await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
                     name_remind: remind.note_repair + ' NDK',
                     vehicle_name: vehicles.join(', '),
@@ -350,13 +354,15 @@ class RemindModel extends DatabaseModel {
                 'remind.model.ts',
                 Date.now(),
             );
-            const reminds: any = Object.values(data);
+            const reminds: any = Object.values(data).map((item: any) =>
+                JSON.parse(item),
+            );
             const remindIndex = reminds.findIndex(
                 (remind: any) => remind.id === remindID,
             );
 
             if (remindIndex !== -1) {
-                let remind = JSON.parse(reminds[remindIndex]);
+                let remind = reminds[remindIndex];
                 remind.is_notified = 1;
                 await redisModel.hSet(
                     'remind',
@@ -411,12 +417,15 @@ class RemindModel extends DatabaseModel {
                 'remind.model.ts',
                 Date.now(),
             );
-            const reminds: any = isRedisReady ? Object.values(data) : result;
+            const reminds: any = Object.values(data).map((item: any) =>
+                JSON.parse(item),
+            );
+
             const remindIndex = reminds.findIndex(
                 (remind: any) => remind.id === remindID,
             );
             if (remindIndex !== -1) {
-                let remind = JSON.parse(reminds[remindIndex]);
+                let remind = reminds[remindIndex];
                 remind.is_notified = 0;
                 await redisModel.hSet(
                     'remind',
@@ -486,6 +495,10 @@ class RemindModel extends DatabaseModel {
                 data?.remind_category_id ?? remindOld.remind_category_id,
             cycle: data?.cycle ?? remindOld.cycle,
             update_time: Date.now(),
+            user_id:
+                data?.user?.level === 10
+                    ? data?.user?.userId
+                    : data?.user?.parentId ?? remindOld.user_id,
         };
         const remind = {
             ...payload,
@@ -502,7 +515,7 @@ class RemindModel extends DatabaseModel {
             remindID,
         );
 
-        if (data?.schedules) {
+        if (data?.schedules && payload.is_notified === 0) {
             await this.delete(
                 con,
                 tables.tableRemindSchedule,
@@ -518,7 +531,7 @@ class RemindModel extends DatabaseModel {
                 );
             }
         }
-        if (data?.expiration_time) {
+        if (data?.expiration_time && payload.is_notified === 0) {
             scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
             await this.scheduleCronJobForExpiration(remind);
         }
@@ -536,40 +549,40 @@ class RemindModel extends DatabaseModel {
     }
 
     async search(con: PoolConnection, userID: number, query: any) {
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
-        if (isRedisReady) {
-            const { data } = await redisModel.hGetAll(
-                'remind',
-                'remind.model.ts',
-                Date.now(),
-            );
-            const reminds: any = Object.values(data).filter((remind: any) => {
-                remind = JSON.parse(remind);
-                // filter by user_id, vehicle_id, keyword, is_deleted, is_received, note_repair, cumulative_kilometers
-                return (
-                    remind.user_id === userID &&
-                    remind.is_deleted === 0 &&
-                    remind.is_received === 0 &&
-                    remind.vehicles.includes(query.vehicle_id) &&
-                    (remind.note_repair
-                        .toLowerCase()
-                        .includes(query.keyword.toLowerCase()) ||
-                        remind.cumulative_kilometers
-                            .toLowerCase()
-                            .includes(query.keyword.toLowerCase()) ||
-                        remind.category_name
-                            .toLowerCase()
-                            .includes(query.keyword.toLowerCase()) ||
-                        remind.license_plate
-                            .toLowerCase()
-                            .includes(query.keyword.toLowerCase()) ||
-                        remind.license
-                            .toLowerCase()
-                            .includes(query.keyword.toLowerCase()))
-                );
-            });
-            return reminds;
-        }
+        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        // if (isRedisReady) {
+        //     const { data } = await redisModel.hGetAll(
+        //         'remind',
+        //         'remind.model.ts',
+        //         Date.now(),
+        //     );
+        //     const reminds: any = Object.values(data).filter((remind: any) => {
+        //         remind = JSON.parse(remind);
+        //         // filter by user_id, vehicle_id, keyword, is_deleted, is_received, note_repair, cumulative_kilometers
+        //         return (
+        //             remind.user_id === userID &&
+        //             remind.is_deleted === 0 &&
+        //             remind.is_received === 0 &&
+        //             remind.vehicles.includes(query.vehicle_id) &&
+        //             (remind.note_repair
+        //                 .toLowerCase()
+        //                 .includes(query.keyword.toLowerCase()) ||
+        //                 remind.cumulative_kilometers
+        //                     .toLowerCase()
+        //                     .includes(query.keyword.toLowerCase()) ||
+        //                 remind.category_name
+        //                     .toLowerCase()
+        //                     .includes(query.keyword.toLowerCase()) ||
+        //                 remind.license_plate
+        //                     .toLowerCase()
+        //                     .includes(query.keyword.toLowerCase()) ||
+        //                 remind.license
+        //                     .toLowerCase()
+        //                     .includes(query.keyword.toLowerCase()))
+        //         );
+        //     });
+        //     return reminds;
+        // }
 
         let params: any[] = [userID];
         if (query.keyword === null) query.keyword = '';

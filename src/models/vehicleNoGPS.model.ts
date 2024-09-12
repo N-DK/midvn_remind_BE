@@ -68,6 +68,8 @@ class VehicleNoGPS extends DatabaseModel {
                 license_plate: data.license_plate,
                 license: data.license,
                 update_time: Date.now(),
+                user_name: data.user_name,
+                user_address: data.user_address,
             },
             'id',
             vehicleID,
