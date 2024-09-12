@@ -202,18 +202,18 @@ class RemindModel extends DatabaseModel {
             data.current_kilometers = currentKilometers;
         }
 
-        console.log('data.user', data.user);
-
         try {
             const payload = {
                 img_url: data?.img_url ?? null,
                 note_repair: data?.note_repair ?? null,
                 history_repair: data?.history_repair ?? null,
                 current_kilometers: data?.current_kilometers ?? 0,
-                cumulative_kilometers: data?.cumulative_kilometers ?? 0,
+                cumulative_kilometers: data?.cumulative_kilometers
+                    ? Number(data?.cumulative_kilometers)
+                    : 0,
                 expiration_time: parseInt(data?.expiration_time ?? 0),
                 is_deleted: 0,
-                km_before: parseInt(data?.km_before) ?? 0,
+                km_before: data?.km_before ? Number(data?.km_before) : 0,
                 is_notified: parseInt(data?.is_notified ?? 0),
                 is_received: parseInt(data?.is_received ?? 0),
                 remind_category_id: parseInt(data?.remind_category_id),
@@ -224,6 +224,8 @@ class RemindModel extends DatabaseModel {
                         ? data?.user?.userId
                         : data?.user?.parentId, // 10 là đại lý
             };
+
+            console.log('payload', payload);
 
             const remind_id: any = await this.insert(
                 con,
