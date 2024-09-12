@@ -33,7 +33,7 @@ const remindFeature = async (client: any, data: any, requestId: any) => {
                         remind.km_before;
 
                 if (isOverKm) {
-                    remindNotify.sendNotifyRemind(SV_NOTIFY as string, {
+                    await remindNotify.sendNotifyRemind(SV_NOTIFY as string, {
                         name_remind: 'Vượt quá số km bảo dưỡng',
                         vehicle_name: data.vehicle_name,
                         user_id: remind.user_id, //remind.user_id,
