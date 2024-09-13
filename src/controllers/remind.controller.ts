@@ -22,7 +22,7 @@ class RemindController {
         async (req: Request, res: Response, next: NextFunction) => {
             if (Array.isArray(req.files) && req.files.length > 0) {
                 req.body.img_url = req.files
-                    .map((file) => file.path)
+                    .map((file) => file.path.replace('src', ''))
                     .join(', ');
             }
 
