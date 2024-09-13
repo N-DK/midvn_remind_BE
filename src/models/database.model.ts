@@ -292,6 +292,10 @@ class DatabaseModel {
         orderBy: string = '',
     ) {
         return await new Promise((resolve, reject) => {
+            if (!db) {
+                return reject({ msg: 'Database connection is required.' });
+            }
+
             const joinClauses = joins
                 .map((join) => {
                     const joinType = join.type ? `${join.type} JOIN` : 'JOIN';
@@ -300,21 +304,19 @@ class DatabaseModel {
                 .join(' ');
             const query = `SELECT ${fields} FROM ${mainTable} ${joinClauses} WHERE ${where} ${orderBy}`;
 
-            if (db) {
-                db.query(
-                    query,
-                    conditions,
-                    (err: QueryError | null, dataRes: QueryResult) => {
-                        if (err) {
-                            console.log(err);
-                            return reject({
-                                msg: 'Error occurred while querying the database.',
-                            });
-                        }
-                        return resolve(dataRes);
-                    },
-                );
-            }
+            db.query(
+                query,
+                conditions,
+                (err: QueryError | null, dataRes: QueryResult) => {
+                    if (err) {
+                        console.log(err);
+                        return reject({
+                            msg: 'Error occurred while querying the database.',
+                        });
+                    }
+                    return resolve(dataRes);
+                },
+            );
         });
     }
 }

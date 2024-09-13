@@ -1,13 +1,12 @@
 import { PoolConnection } from 'mysql2';
 import DatabaseModel from '../models/database.model';
-import { getConnection } from '../dbs/init.mysql';
+import { getActiveConnections, getConnection } from '../dbs/init.mysql';
 import { tables } from '../constants/tableName.constant';
 import multer from 'multer';
 import redisModel from '../models/redis.model';
 
 const dataBaseModel = new DatabaseModel();
 
-let connection: PoolConnection;
 const storage = multer.diskStorage({
     destination: './src/uploads',
     filename: function (req, file, cb) {
@@ -19,15 +18,31 @@ let remindsVehicles: any;
 const reminder = {
     init: async () => {
         try {
-            const { conn } = await getConnection();
-            connection = conn;
             // 20s clear remindsVehicles = undefined dùng setInterval
-            // remindsVehicles = await reminder.getReminds();
-            // setInterval(async () => {
-            //     remindsVehicles = await reminder.getReminds();
-            // }, 1 * 60 * 1000);
+            const isRedisReady = redisModel.redis.instanceConnect.isReady;
+            if (!isRedisReady) {
+                console.log('CACHE FROM DATABASE -- REDIS NOT READY');
+                remindsVehicles = await new Promise(async (resolve, reject) => {
+                    try {
+                        const result = await reminder.getReminds(); // Gọi phương thức getReminds và đợi nó hoàn tất
+                        resolve(result); // Kết quả từ getReminds được giải quyết
+                    } catch (error) {
+                        reject(error); // Nếu có lỗi, từ chối promise với lỗi đó
+                    }
+                });
+                const interval = setInterval(async () => {
+                    const isRedisReady =
+                        redisModel.redis.instanceConnect.isReady;
+                    console.log('CLEAR REMINDS VEHICLES FROM DATABASE');
+                    if (isRedisReady) {
+                        clearInterval(interval);
+                    } else {
+                        remindsVehicles = await reminder.getReminds();
+                    }
+                }, 1 * 60 * 1000);
+            }
         } catch (error) {
-            console.log('Error: ', error);
+            console.log('Error init reminder: ', error);
         }
     },
 
@@ -50,64 +65,81 @@ const reminder = {
         //     return results;
         // }
 
-        const results: any = await dataBaseModel.selectWithJoins(
-            connection,
-            tables.tableRemindVehicle,
-            `${tables.tableRemindCategory}.*, ${tables.tableRemindCategory}.name as category_name,${tables.tableRemindVehicle}.*, ${tables.tableRemind}.*`,
-            'vehicle_id = ? AND is_received = 0',
-            [vehicleId],
-            [
-                {
-                    table: tables.tableRemind,
-                    on: `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`,
-                    type: 'LEFT',
-                },
-                {
-                    table: tables.tableRemindCategory,
-                    on: `${tables.tableRemindCategory}.id = ${tables.tableRemind}.remind_category_id`,
-                    type: 'LEFT',
-                },
-            ],
-            `ORDER BY ${tables.tableRemind}.expiration_time ASC`,
-        );
+        try {
+            const { conn } = await getConnection();
+            try {
+                const results: any = await dataBaseModel.selectWithJoins(
+                    conn,
+                    tables.tableRemindVehicle,
+                    `${tables.tableRemindCategory}.*, ${tables.tableRemindCategory}.name as category_name,${tables.tableRemindVehicle}.*, ${tables.tableRemind}.*`,
+                    'vehicle_id = ? AND is_received = 0',
+                    [vehicleId],
+                    [
+                        {
+                            table: tables.tableRemind,
+                            on: `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`,
+                            type: 'LEFT',
+                        },
+                        {
+                            table: tables.tableRemindCategory,
+                            on: `${tables.tableRemindCategory}.id = ${tables.tableRemind}.remind_category_id`,
+                            type: 'LEFT',
+                        },
+                    ],
+                    `ORDER BY ${tables.tableRemind}.expiration_time ASC`,
+                );
 
-        return results;
+                return results;
+            } catch (error) {
+            } finally {
+                conn.release();
+            }
+        } catch (error) {}
     },
 
     getReminds: async () => {
-        if (!remindsVehicles) {
-            const results: any = await dataBaseModel.selectWithJoins(
-                connection,
-                tables.tableRemindVehicle,
-                `${tables.tableRemindCategory}.*, ${tables.tableRemindVehicle}.*, ${tables.tableRemind}.*`,
-                `is_received = 0 AND is_notified = 0`,
-                [],
-                [
-                    {
-                        table: tables.tableRemind,
-                        on: `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`,
-                        type: 'LEFT',
-                    },
-                    {
-                        table: tables.tableRemindCategory,
-                        on: `${tables.tableRemindCategory}.id = ${tables.tableRemind}.remind_category_id`,
-                        type: 'LEFT',
-                    },
-                ],
-            );
+        try {
+            if (!remindsVehicles) {
+                const { conn } = await getConnection();
 
-            const groupByVehicleId: any = {};
-            results.forEach((item: any) => {
-                const { vehicle_id, ...other } = item;
-                if (!groupByVehicleId[item.vehicle_id]) {
-                    groupByVehicleId[item.vehicle_id] = [];
+                try {
+                    const results: any = await dataBaseModel.selectWithJoins(
+                        conn,
+                        tables.tableRemindVehicle,
+                        `${tables.tableRemindCategory}.*, ${tables.tableRemindVehicle}.*, ${tables.tableRemind}.*`,
+                        `is_received = 0 AND is_notified = 0`,
+                        [],
+                        [
+                            {
+                                table: tables.tableRemind,
+                                on: `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`,
+                                type: 'LEFT',
+                            },
+                            {
+                                table: tables.tableRemindCategory,
+                                on: `${tables.tableRemindCategory}.id = ${tables.tableRemind}.remind_category_id`,
+                                type: 'LEFT',
+                            },
+                        ],
+                    );
+
+                    const groupByVehicleId: any = {};
+                    results.forEach((item: any) => {
+                        const { vehicle_id, ...other } = item;
+                        if (!groupByVehicleId[item.vehicle_id]) {
+                            groupByVehicleId[item.vehicle_id] = [];
+                        }
+                        groupByVehicleId[item.vehicle_id].push({ ...other });
+                    });
+
+                    remindsVehicles = groupByVehicleId;
+                } catch (error) {
+                } finally {
+                    conn.release();
                 }
-                groupByVehicleId[item.vehicle_id].push({ ...other });
-            });
-
-            remindsVehicles = groupByVehicleId;
-        }
-        return remindsVehicles;
+                return remindsVehicles;
+            }
+        } catch (error) {}
     },
 
     getCategoryAllByUserId: async (userId: number) => {
@@ -127,36 +159,52 @@ const reminder = {
         //     return results;
         // }
 
-        const results: any = await dataBaseModel.selectWithJoins(
-            connection,
-            tables.tableRemindVehicle,
-            `vehicle_id, icon`,
-            `${tables.tableRemind}.user_id = ? AND is_received = 0`,
-            [userId],
-            [
-                {
-                    table: tables.tableRemind,
-                    on: `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`,
-                    type: 'LEFT',
-                },
-                {
-                    table: tables.tableRemindCategory,
-                    on: `${tables.tableRemindCategory}.id = ${tables.tableRemind}.remind_category_id`,
-                    type: 'LEFT',
-                },
-            ],
-        );
+        try {
+            const { conn } = await getConnection();
 
-        const groupByVehicleId: any = {};
-        results.forEach((item: any) => {
-            const { vehicle_id, ...other } = item;
-            if (!groupByVehicleId[item.vehicle_id]) {
-                groupByVehicleId[item.vehicle_id] = [];
+            try {
+                const results: any = await dataBaseModel.selectWithJoins(
+                    conn,
+                    tables.tableRemindVehicle,
+                    `vehicle_id, icon`,
+                    `${tables.tableRemind}.user_id = ? AND is_received = 0`,
+                    [userId],
+                    [
+                        {
+                            table: tables.tableRemind,
+                            on: `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`,
+                            type: 'LEFT',
+                        },
+                        {
+                            table: tables.tableRemindCategory,
+                            on: `${tables.tableRemindCategory}.id = ${tables.tableRemind}.remind_category_id`,
+                            type: 'LEFT',
+                        },
+                    ],
+                );
+
+                const groupByVehicleId: any = {};
+                results.forEach((item: any) => {
+                    const { vehicle_id, ...other } = item;
+                    if (!groupByVehicleId[item.vehicle_id]) {
+                        groupByVehicleId[item.vehicle_id] = [];
+                    }
+                    groupByVehicleId[item.vehicle_id].push(
+                        ...Object.values(other),
+                    );
+                });
+
+                return groupByVehicleId;
+            } catch (error) {
+            } finally {
+                conn.release();
             }
-            groupByVehicleId[item.vehicle_id].push(...Object.values(other));
-        });
+        } catch (error) {}
 
-        return groupByVehicleId;
+        try {
+        } catch (error) {
+            // console.log('Error: ', error);
+        }
     },
 
     // Hàm gom nhóm các phần tử trong vehicles

@@ -7,6 +7,7 @@ import scheduleUtils from '../utils/schedule.util';
 import reminder from '../utils/reminder.util';
 import GPSApi from '../api/GPS.api';
 import configureEnvironment from '../config/dotenv.config';
+import remindService from '../services/remind.service';
 
 const { SV_NOTIFY } = configureEnvironment();
 
@@ -225,7 +226,7 @@ class RemindModel extends DatabaseModel {
                         : data?.user?.parentId ?? data?.user?.userId,
             };
 
-            console.log('payload', payload);
+            // console.log('payload', payload);
 
             const remind_id: any = await this.insert(
                 con,
@@ -388,6 +389,7 @@ class RemindModel extends DatabaseModel {
             'id',
             remindID,
         );
+
         const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
         const results: any = await this.select(
@@ -480,6 +482,7 @@ class RemindModel extends DatabaseModel {
             [remindID],
         );
         const remindOld = result[0];
+
         const payload = {
             img_url: data?.img_url ?? remindOld.img_url,
             note_repair: data?.note_repair ?? remindOld.note_repair,
@@ -502,6 +505,7 @@ class RemindModel extends DatabaseModel {
                     ? data?.user?.userId
                     : data?.user?.parentId ?? remindOld.user_id,
         };
+
         const remind = {
             ...payload,
             schedules: data?.schedules ?? [],
@@ -523,16 +527,21 @@ class RemindModel extends DatabaseModel {
                 tables.tableRemindSchedule,
                 `remind_id = ${remindID}`,
             );
+
             await this.insertRemindSchedule(con, remindID, data);
+
+            const vehicles = await scheduleUtils.getVehiclesByRemindId(
+                remindID,
+            );
+
+            // console.log('vehicles', vehicles);
+
             scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
             for (const schedule of data?.schedules) {
-                await this.handleSchedule(
-                    schedule,
-                    remind,
-                    await scheduleUtils.getVehiclesByRemindId(remindID),
-                );
+                await this.handleSchedule(schedule, remind, vehicles);
             }
         }
+
         if (data?.expiration_time && payload.is_notified === 0) {
             scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
             await this.scheduleCronJobForExpiration(remind);
@@ -547,6 +556,7 @@ class RemindModel extends DatabaseModel {
                 Date.now(),
             );
         }
+
         return results;
     }
 
@@ -608,6 +618,7 @@ class RemindModel extends DatabaseModel {
         if (query.remind_category_id) {
             whereClause += ` AND ${tables.tableRemind}.remind_category_id = ${query.remind_category_id}`;
         }
+
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
@@ -842,7 +853,7 @@ class RemindModel extends DatabaseModel {
         );
         const remindOld = result[0];
 
-        console.log('remindOld', remindOld);
+        // console.log('remindOld', remindOld);
 
         const vehicles = await scheduleUtils.getVehiclesByRemindId(remindID);
         const schedules: any = await scheduleUtils.buildSchedule(remindID);
@@ -869,8 +880,8 @@ class RemindModel extends DatabaseModel {
                 end: s.end + remindOld.cycle * 30 * 24 * 60 * 60 * 1000,
             })),
         };
-        await this.updateRemind(con, { is_received: 1 }, remindID);
-        await this.addRemind(con, payload);
+        await remindService.update({ is_received: 1 }, remindID);
+        await remindService.addRemind(payload);
         scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
         scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
 

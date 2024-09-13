@@ -192,11 +192,14 @@ class RemindService {
 
     async getAllGPS(query: any) {
         try {
+            const { conn } = await getConnection();
             try {
                 const result = await remindModel.getAllGPS(query);
                 return result;
             } catch (error) {
                 throw error;
+            } finally {
+                conn.release();
             }
         } catch (error) {
             throw error;
@@ -205,11 +208,14 @@ class RemindService {
 
     async getCategoryAll(userId: any) {
         try {
+            const { conn } = await getConnection();
             try {
                 const result = await remindModel.getCategoryAll(userId);
                 return result;
             } catch (error) {
                 throw error;
+            } finally {
+                conn;
             }
         } catch (error) {
             throw error;
@@ -218,6 +224,7 @@ class RemindService {
 
     async getScheduleByRemindId(remindID: number) {
         try {
+            const { conn } = await getConnection();
             try {
                 const result = await remindModel.getScheduleByRemindId(
                     remindID,
@@ -225,6 +232,8 @@ class RemindService {
                 return result;
             } catch (error) {
                 throw error;
+            } finally {
+                conn.release();
             }
         } catch (error) {
             throw error;

@@ -22,7 +22,7 @@ const remindFeature = async (client: any, data: any, requestId: any) => {
         } else {
             // Lấy remind từ nguồn khác nếu Redis không sẵn sàng
             const result = await reminder.getReminds();
-            reminds = result[data.imei] || [];
+            reminds = result?.[data.imei] || [];
         }
 
         // Nếu có remind, tiến hành xử lý

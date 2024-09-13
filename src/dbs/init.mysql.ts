@@ -9,7 +9,7 @@ class Database {
         return await new Promise((resolve, reject) => {
             pool.getConnection((err, conn) => {
                 if (err) {
-                    console.log('error when connecting to Database', err);
+                    // console.log('error when connecting to Database', err);
                     return reject({ msg: constants.SERVER_ERROR });
                 }
                 resolve({ conn, connPromise: conn.promise() });

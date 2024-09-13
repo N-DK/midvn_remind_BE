@@ -5,9 +5,8 @@ import { remindFeature } from 'notify-services';
 import DatabaseModel from '../models/database.model';
 import { getConnection } from '../dbs/init.mysql';
 import { tables } from '../constants/tableName.constant';
-import { PoolConnection } from 'mysql2';
-import remindModel from '../models/remind.model';
 import configureEnvironment from '../config/dotenv.config';
+import remindService from '../services/remind.service';
 
 const { SV_NOTIFY } = configureEnvironment();
 let reminds: any[] = [];
@@ -15,18 +14,15 @@ const cronJobs = new Map<string, ScheduledTask>();
 
 class ScheduleUtils {
     private databaseModel: DatabaseModel;
-    private conn: PoolConnection;
     private readonly UNIT_MONTH = 30 * 24 * 60 * 60;
 
     constructor() {
         this.databaseModel = new DatabaseModel();
         this.init();
-        this.conn = null as unknown as PoolConnection;
     }
 
     private async init() {
         try {
-            this.conn = (await getConnection()).conn;
             await this.loadSchedules();
             this.restoreCronJobs();
             await this.restoreCronJobsForExpired();
@@ -78,7 +74,7 @@ class ScheduleUtils {
             `*/20 8-20 ${day} ${month} *`, // */20 8-20
             async () => {
                 try {
-                    await remindModel.addRemind(this.conn, {
+                    await remindService.addRemind({
                         ...other,
                         user: { userId: remind.user_id },
                         expiration_time:
@@ -121,13 +117,7 @@ class ScheduleUtils {
                             Date.now(),
                         );
                     } else {
-                        await this.databaseModel.update(
-                            this.conn,
-                            tables.tableRemind,
-                            { is_notified: 1, update_time: Date.now() }, // Đánh dấu đã thông báo
-                            'id',
-                            remind.id,
-                        );
+                        await remindService.updateNotifiedOff(remind.id);
                     }
                 }
             },
@@ -205,7 +195,7 @@ class ScheduleUtils {
             const isRedisReady = redisModel.redis.instanceConnect.isReady;
             if (!isRedisReady) {
                 const results = await this.getReminds();
-                return results.filter(
+                return results?.filter(
                     (item) =>
                         !isBefore(
                             new Date(item.expiration_time),
@@ -238,27 +228,37 @@ class ScheduleUtils {
         }
     }
 
-    public async getReminds() {
-        const results: any = await this.databaseModel.select(
-            this.conn,
-            tables.tableRemind,
-            '*',
-            'is_notified = 0 AND is_deleted = 0 AND is_received = 0',
-            [],
-        );
+    private async getReminds() {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const results: any = await this.databaseModel.select(
+                    conn,
+                    tables.tableRemind,
+                    '*',
+                    'is_notified = 0 AND is_deleted = 0 AND is_received = 0',
+                    [],
+                );
 
-        const reminds = await Promise.all(
-            results.map(async (item: any) => {
-                const schedules = await this.buildSchedule(item.id);
-                const vehicles = await this.getVehiclesByRemindId(item.id);
-                return {
-                    ...item,
-                    schedules,
-                    vehicles,
-                };
-            }),
-        );
-        return reminds;
+                const reminds = await Promise.all(
+                    results.map(async (item: any) => {
+                        const schedules = await this.buildSchedule(item.id);
+                        const vehicles = await this.getVehiclesByRemindId(
+                            item.id,
+                        );
+                        return {
+                            ...item,
+                            schedules,
+                            vehicles,
+                        };
+                    }),
+                );
+                return reminds;
+            } catch (error) {
+            } finally {
+                conn.release();
+            }
+        } catch (error) {}
     }
 
     private async loadSchedules() {
@@ -266,7 +266,7 @@ class ScheduleUtils {
             const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
             if (!isRedisReady) {
-                reminds = await this.getReminds();
+                reminds = (await this.getReminds()) ?? [];
             } else {
                 const result = await this.getRemindFromRedis();
 
@@ -291,60 +291,77 @@ class ScheduleUtils {
     }
 
     public async getVehiclesByRemindId(remind_id: any) {
-        const vehicles: any = await this.databaseModel.selectWithJoins(
-            this.conn,
-            tables.tableRemind,
-            '*',
-            `remind_id = ${remind_id}`,
-            [],
-            [
-                {
-                    table: tables.tableRemindVehicle,
-                    on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
-                    type: 'LEFT',
-                },
-            ],
-        );
+        try {
+            const { conn } = await getConnection();
 
-        return vehicles.map((v: any) => v.vehicle_id);
+            try {
+                const vehicles: any = await this.databaseModel.selectWithJoins(
+                    conn,
+                    tables.tableRemind,
+                    '*',
+                    `remind_id = ${remind_id}`,
+                    [],
+                    [
+                        {
+                            table: tables.tableRemindVehicle,
+                            on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
+                            type: 'LEFT',
+                        },
+                    ],
+                );
+
+                return vehicles.map((v: any) => v.vehicle_id);
+            } catch (error) {
+            } finally {
+                conn.release();
+            }
+        } catch (error) {}
     }
 
     public async buildSchedule(remindId: any) {
-        const result: any = await this.databaseModel.selectWithJoins(
-            this.conn,
-            tables.tableRemindSchedule,
-            '*',
-            `remind_id = ${remindId}`,
-            [],
-            [
-                {
-                    table: tables.tableRemind,
-                    on: `${tables.tableRemindSchedule}.remind_id = ${tables.tableRemind}.id`,
-                    type: 'LEFT',
-                },
-            ],
-        );
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result: any = await this.databaseModel.selectWithJoins(
+                    conn,
+                    tables.tableRemindSchedule,
+                    '*',
+                    `remind_id = ${remindId}`,
+                    [],
+                    [
+                        {
+                            table: tables.tableRemind,
+                            on: `${tables.tableRemindSchedule}.remind_id = ${tables.tableRemind}.id`,
+                            type: 'LEFT',
+                        },
+                    ],
+                );
 
-        const groupedData = result
-            .filter(
-                (item: any) =>
-                    item.is_notified === 0 &&
-                    item.is_deleted === 0 &&
-                    item.is_received === 0,
-            )
-            .reduce((acc: any, item: any) => {
-                if (!acc[item.remind_id]) {
-                    acc[item.remind_id] = [];
-                }
-                acc[item.remind_id].push({
-                    start: item.start,
-                    end: item.end,
-                    time: item.time,
-                });
-                return acc;
-            }, {});
+                const groupedData = result
+                    .filter(
+                        (item: any) =>
+                            item.is_notified === 0 &&
+                            item.is_deleted === 0 &&
+                            item.is_received === 0,
+                    )
+                    .reduce((acc: any, item: any) => {
+                        if (!acc[item.remind_id]) {
+                            acc[item.remind_id] = [];
+                        }
+                        acc[item.remind_id].push({
+                            start: item.start,
+                            end: item.end,
+                            time: item.time,
+                        });
+                        return acc;
+                    }, {});
 
-        return Object.values(groupedData)[0];
+                return Object.values(groupedData)[0];
+            } catch (error) {
+            } finally {
+                conn.release();
+            }
+        } catch (error) {}
     }
 
     private isValidDateRange(
