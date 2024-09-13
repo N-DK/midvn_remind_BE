@@ -9,7 +9,7 @@ const dataBaseModel = new DatabaseModel();
 
 let connection: PoolConnection;
 const storage = multer.diskStorage({
-    destination: './uploads',
+    destination: './src/uploads',
     filename: function (req, file, cb) {
         return cb(null, file.originalname);
     },
@@ -30,6 +30,7 @@ const reminder = {
             console.log('Error: ', error);
         }
     },
+
     getRemindsByVehicleId: async (vehicleId: string) => {
         // const isRedisReady = redisModel.redis.instanceConnect.isReady;
 
@@ -52,7 +53,7 @@ const reminder = {
         const results: any = await dataBaseModel.selectWithJoins(
             connection,
             tables.tableRemindVehicle,
-            `${tables.tableRemindCategory}.*, ${tables.tableRemindVehicle}.*, ${tables.tableRemind}.*`,
+            `${tables.tableRemindCategory}.*, ${tables.tableRemindCategory}.name as category_name,${tables.tableRemindVehicle}.*, ${tables.tableRemind}.*`,
             'vehicle_id = ? AND is_received = 0',
             [vehicleId],
             [

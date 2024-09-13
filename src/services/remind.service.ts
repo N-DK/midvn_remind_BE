@@ -215,6 +215,21 @@ class RemindService {
             throw error;
         }
     }
+
+    async getScheduleByRemindId(remindID: number) {
+        try {
+            try {
+                const result = await remindModel.getScheduleByRemindId(
+                    remindID,
+                );
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindService();

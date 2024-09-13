@@ -27,7 +27,7 @@ app.use(
 );
 app.use(cors({ origin: true, credentials: true })); // origin: true cho phép client truy cập.
 // config uploads folder
-app.use(express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // body-parser config
 const bodyParser = require('body-parser');

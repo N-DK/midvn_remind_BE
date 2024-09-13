@@ -120,6 +120,15 @@ class RemindController {
             GET(res, data);
         },
     );
+
+    getScheduleByRemindId = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const data = await remindService.getScheduleByRemindId(
+                parseInt(req.params.id),
+            );
+            GET(res, data);
+        },
+    );
 }
 
 export default new RemindController();

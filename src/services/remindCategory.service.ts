@@ -18,27 +18,34 @@ class RemindCategoryService {
             throw new BusinessLogicError(error.msg);
         }
     }
-    async getByUserID(UserID : number){
-        try{
+    async getByUserID(UserID: number) {
+        try {
             const { conn } = await getConnection();
             try {
-                const data = await remindCategoryModel.getByUserID(conn, UserID);
+                const data = await remindCategoryModel.getByUserID(
+                    conn,
+                    UserID,
+                );
                 return data;
             } catch (error) {
                 throw error;
             } finally {
                 conn.release();
             }
-        }catch (error: any) {
+        } catch (error: any) {
             throw error;
         }
     }
 
-    async addCategory(data: any, UserID : number){
+    async addCategory(data: any, UserID: number) {
         try {
             const { conn } = await getConnection();
             try {
-                const result = await remindCategoryModel.addCategory(conn, data, UserID);
+                const result = await remindCategoryModel.addCategory(
+                    conn,
+                    data,
+                    UserID,
+                );
                 return result;
             } catch (error) {
                 throw error;

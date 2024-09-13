@@ -222,7 +222,7 @@ class RemindModel extends DatabaseModel {
                 user_id:
                     data?.user?.level === 10
                         ? data?.user?.userId
-                        : data?.user?.parentId, // 10 là đại lý
+                        : data?.user?.parentId ?? data?.user?.userId,
             };
 
             console.log('payload', payload);
@@ -449,7 +449,7 @@ class RemindModel extends DatabaseModel {
         remindID: number,
         data: any,
     ) {
-        if (data.schedules === null || data.schedules.length === 0) return;
+        if (!data.schedules || data?.schedules?.length === 0) return;
         const values = data?.schedules
             ?.map(
                 (schedule: any) =>
@@ -710,128 +710,170 @@ class RemindModel extends DatabaseModel {
     }
 
     async finishRemind(con: PoolConnection, remindID: number, user_id: number) {
-        //update current remind;
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
-        let remind: any;
-        const vehicles = await scheduleUtils.getVehiclesByRemindId(remindID);
-        if (isRedisReady) {
-            const { data } = await redisModel.hGet(
-                'remind',
-                remindID.toString(),
-                'remind.models.ts',
-                Date.now(),
-            );
-            if (data !== null) {
-                let remindJson = JSON.parse(data);
-                remind = remindJson;
+        // //update current remind;
+        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        // let remind: any;
+        // const vehicles = await scheduleUtils.getVehiclesByRemindId(remindID);
+        // if (isRedisReady) {
+        //     const { data } = await redisModel.hGet(
+        //         'remind',
+        //         remindID.toString(),
+        //         'remind.models.ts',
+        //         Date.now(),
+        //     );
+        //     if (data !== null) {
+        //         let remindJson = JSON.parse(data);
+        //         remind = remindJson;
 
-                remindJson.is_received = 1;
-                remindJson.complete_date = Date.now();
+        //         remindJson.is_received = 1;
+        //         remindJson.complete_date = Date.now();
 
-                const remindUpdateRedis = redisModel.hSet(
-                    'remind',
-                    remindID.toString(),
-                    JSON.stringify(remindJson),
-                    'remind.models.ts',
-                    Date.now(),
-                );
-                // const deleteReids = redisModel.hDel(
-                //     'remind',
-                //     remindID.toString(),
-                //     'remind.models.ts',
-                //     Date.now(),
-                // )
-            }
-        } else {
-            remind = (
-                (await this.select(con, tables.tableRemind, '*', 'id = ?', [
-                    remindID,
-                ])) as any
-            )[0];
-            remind.is_received = 1;
-            remind.complete_date = Date.now();
-        }
+        //         // FIX BUG: update remind in redis
+        //         const remindUpdateRedis = redisModel.hSet(
+        //             'remind',
+        //             remindID.toString(),
+        //             JSON.stringify(remindJson),
+        //             'remind.models.ts',
+        //             Date.now(),
+        //         );
+        //         // const deleteReids = redisModel.hDel(
+        //         //     'remind',
+        //         //     remindID.toString(),
+        //         //     'remind.models.ts',
+        //         //     Date.now(),
+        //         // )
+        //     }
+        // } else {
+        //     remind = (
+        //         (await this.select(con, tables.tableRemind, '*', 'id = ?', [
+        //             remindID,
+        //         ])) as any
+        //     )[0];
+        //     remind.is_received = 1;
+        //     remind.complete_date = Date.now();
+        // }
 
-        const resultUpdate = await this.update(
-            con,
-            tables.tableRemind,
-            { is_received: 1, complete_date: Date.now() },
-            'id',
-            remindID,
-        );
-        //get data current remindF
-        let dataRemindRedis: any = null;
-        if (isRedisReady) {
-            dataRemindRedis = await redisModel.hGet(
-                'remind',
-                remindID.toString(),
-                'remind.models.ts',
-                Date.now(),
-            );
-        }
+        // const resultUpdate = await this.update(
+        //     con,
+        //     tables.tableRemind,
+        //     { is_received: 1, complete_date: Date.now() },
+        //     'id',
+        //     remindID,
+        // );
+        // //get data current remindF
+        // let dataRemindRedis: any = null;
+        // if (isRedisReady) {
+        //     dataRemindRedis = await redisModel.hGet(
+        //         'remind',
+        //         remindID.toString(),
+        //         'remind.models.ts',
+        //         Date.now(),
+        //     );
+        // }
 
-        const dataCurrentRemindmap: any = await this.select(
+        // const dataCurrentRemindmap: any = await this.select(
+        //     con,
+        //     tables.tableRemind,
+        //     '*',
+        //     'id = ?',
+        //     [remindID],
+        // );
+        // let dataCurrentRemind = dataCurrentRemindmap[0];
+        // const newExpDate =
+        //     dataCurrentRemind.expiration_time +
+        //     dataCurrentRemind.cycle * 30 * 24 * 60 * 60 * 1000;
+
+        // //insert to schedule
+        // const getSchedulebyID: any = await this.select(
+        //     con,
+        //     tables.tableRemindSchedule,
+        //     '*',
+        //     'remind_id = ?',
+        //     remindID as any,
+        // );
+        // const schedules = getSchedulebyID.map((s: any) => ({
+        //     ...s,
+        //     start:
+        //         s.start + dataCurrentRemind.cycle * (30 * 24 * 60 * 60) * 1000,
+        //     end: s.end + dataCurrentRemind.cycle * (30 * 24 * 60 * 60) * 1000,
+        //     time: s.time,
+        // }));
+
+        // //payload
+        // const payload = {
+        //     remind_category_id: dataCurrentRemind.remind_category_id,
+        //     is_notified: 0,
+        //     note_repair: dataCurrentRemind.note_repair,
+        //     expiration_time: newExpDate,
+        //     cumulative_kilometers: dataCurrentRemind.cumulative_kilometers,
+        //     km_before: dataCurrentRemind.km_before,
+        //     schedules: schedules,
+        //     img_url: dataCurrentRemind.img_url,
+        //     history_repair: dataCurrentRemind.history_repair,
+        //     current_kilometers: dataCurrentRemind.current_kilometers,
+        //     is_received: 0,
+        //     create_time: Date.now(),
+        //     cycle: dataCurrentRemind.cycle,
+        //     user: { userId: user_id },
+        //     vehicles,
+        // };
+
+        // const remind_id = await this.addRemind(con, payload);
+        // // await this.insertRemindSchedule(con, remind_id as any, payload);
+
+        // //insert new remind to redis
+        // if (isRedisReady) {
+        //     const newRemindRedis = await redisModel.hSet(
+        //         'remind',
+        //         remind_id as any,
+        //         JSON.stringify(payload),
+        //         'remind.models.ts',
+        //         Date.now(),
+        //     );
+        // }
+
+        // ========================================
+        const result: any = await this.select(
             con,
             tables.tableRemind,
             '*',
             'id = ?',
             [remindID],
         );
-        let dataCurrentRemind = dataCurrentRemindmap[0];
-        const newExpDate =
-            dataCurrentRemind.expiration_time +
-            dataCurrentRemind.cycle * 30 * 24 * 60 * 60 * 1000;
+        const remindOld = result[0];
 
-        //insert to schedule
-        const getSchedulebyID: any = await this.select(
-            con,
-            tables.tableRemindSchedule,
-            '*',
-            'remind_id = ?',
-            remindID as any,
-        );
-        const schedules = getSchedulebyID.map((s: any) => ({
-            ...s,
-            start:
-                s.start + dataCurrentRemind.cycle * (30 * 24 * 60 * 60) * 1000,
-            end: s.end + dataCurrentRemind.cycle * (30 * 24 * 60 * 60) * 1000,
-            time: s.time,
-        }));
+        console.log('remindOld', remindOld);
 
-        //payload
+        const vehicles = await scheduleUtils.getVehiclesByRemindId(remindID);
+        const schedules: any = await scheduleUtils.buildSchedule(remindID);
+        // const cumulative_kilometers =
+        //     await this.getCurrentKilometersByVehicleId(vehicles[0], 'token');
         const payload = {
-            remind_category_id: dataCurrentRemind.remind_category_id,
-            is_notified: 0,
-            note_repair: dataCurrentRemind.note_repair,
-            expiration_time: newExpDate,
-            cumulative_kilometers: dataCurrentRemind.cumulative_kilometers,
-            km_before: dataCurrentRemind.km_before,
-            schedules: schedules,
-            img_url: dataCurrentRemind.img_url,
-            history_repair: dataCurrentRemind.history_repair,
-            current_kilometers: dataCurrentRemind.current_kilometers,
-            is_received: 0,
-            create_time: Date.now(),
-            cycle: dataCurrentRemind.cycle,
+            note_repair: remindOld.note_repair,
+            current_kilometers: remindOld.current_kilometers,
+            cumulative_kilometers: remindOld.cumulative_kilometers,
+            km_before: remindOld.km_before,
+            remind_category_id: remindOld.remind_category_id,
+            cycle: remindOld.cycle,
             user: { userId: user_id },
             vehicles,
+            expiration_time:
+                (Math.ceil(
+                    new Date(remindOld.expiration_time).getTime() / 1000,
+                ) +
+                    remindOld.cycle * 30 * 24 * 60 * 60) *
+                1000,
+            schedules: schedules?.map((s: any) => ({
+                ...s,
+                start: s.start + remindOld.cycle * 30 * 24 * 60 * 60 * 1000,
+                end: s.end + remindOld.cycle * 30 * 24 * 60 * 60 * 1000,
+            })),
         };
+        await this.updateRemind(con, { is_received: 1 }, remindID);
+        await this.addRemind(con, payload);
+        scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
+        scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
 
-        const remind_id = await this.addRemind(con, payload);
-        // await this.insertRemindSchedule(con, remind_id as any, payload);
-
-        //insert new remind to redis
-        if (isRedisReady) {
-            const newRemindRedis = await redisModel.hSet(
-                'remind',
-                remind_id as any,
-                JSON.stringify(payload),
-                'remind.models.ts',
-                Date.now(),
-            );
-        }
-        scheduleUtils.destroyAllCronJobByRemindId(remind_id, 'schedule');
-        scheduleUtils.destroyAllCronJobByRemindId(remind_id, 'expire');
         return payload;
     }
 
@@ -925,6 +967,10 @@ class RemindModel extends DatabaseModel {
 
     async getCategoryAll(userId: any) {
         return await reminder.getCategoryAllByUserId(userId);
+    }
+
+    async getScheduleByRemindId(remindId: any) {
+        return await scheduleUtils.buildSchedule(remindId);
     }
 }
 

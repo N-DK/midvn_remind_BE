@@ -13,7 +13,7 @@ class RemindCategoryController {
     getByUserId = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             const data = await remindCategoryService.getByUserID(
-                parseInt(req.body.user.userId),
+                req.body.user.userId,
             );
             GET(res, data);
         },

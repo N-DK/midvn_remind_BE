@@ -7,7 +7,7 @@ class RemindCategoryModel extends DatabaseModel {
         super();
     }
 
-    public async getAllRows(con: PoolConnection){
+    public async getAllRows(con: PoolConnection) {
         const result = await this.select(
             con,
             tables.tableRemindCategory,
@@ -17,28 +17,24 @@ class RemindCategoryModel extends DatabaseModel {
         );
         return result;
     }
-    async getByUserID(con: PoolConnection, userID: number){
+    async getByUserID(con: PoolConnection, userID: number) {
         const result = await this.select(
             con,
             tables.tableRemindCategory,
             '*',
             'user_id = ? OR user_id IS NULL',
-            [userID]
+            [userID],
         );
         return result;
     }
-    async addCategory(con: PoolConnection, data: any, userID: number){
-        const result = await this.insert(
-            con,
-            tables.tableRemindCategory,
-            {
-               name: data.name,
-               desc: data.desc,
-               icon: data.icon,
-               user_id: userID,
-               create_time: Date.now()
-            }
-        );
+    async addCategory(con: PoolConnection, data: any, userID: number) {
+        const result = await this.insert(con, tables.tableRemindCategory, {
+            name: data.name,
+            desc: data.desc,
+            icon: data.icon.trim() === '' ? '➕' : data.icon,
+            user_id: userID,
+            create_time: Date.now(),
+        });
         return result;
     }
 }

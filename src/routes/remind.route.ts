@@ -7,10 +7,6 @@ import reminder from '../utils/reminder.util';
 
 const router: Router = express.Router();
 
-// router.get("/get-all", verifyToken, remindController.getAll);
-
-// router.get("/search", verifyToken, remindController.search);
-
 router.get('/get-all', verifyToken, (req, res, next) => {
     const { keyword, vehicle_id } = req.query;
     if (
@@ -32,17 +28,6 @@ router.get(
     remindController.getByVehicleId,
 );
 
-// payload:
-// {
-//   remind_category_id: 1,
-//   is_notified: 0,
-//   note_repair: "Thay nhớt",
-//   expiration_time: 1000,
-//   cumulative_kilometers: 1000,
-//   time_before: 1,
-//   vehicles: ["1", "2", "3"]
-// }
-
 router.post(
     '/add-remind',
     reminder.upload.array('images', 10),
@@ -58,8 +43,6 @@ router.post(
 
 router.get('/get-category-all', verifyToken, remindController.getCategoryAll);
 
-// search
-
 router.patch(
     '/update-notified-off/:id',
     [param('id', constants.VALIDATE_DATA).isNumeric()],
@@ -74,46 +57,15 @@ router.patch(
     remindController.updateNotifiedOn,
 );
 
-router.put(
-    '/update/:id',
-    [
-        // param("id", constants.VALIDATE_DATA).isNumeric(),
-        // body("name").isString().withMessage(constants.VALIDATE_DATA),
-        // body("img_url").isString().withMessage(constants.VALIDATE_DATA),
-        // body("note_repair").isString().withMessage(constants.VALIDATE_DATA),
-        // body("history_repair").isString().withMessage(constants.VALIDATE_DATA),
-        // body("current_kilometres").withMessage(constants.VALIDATE_DATA),
-        // body("cumulative_kilometers").withMessage(constants.VALIDATE_DATA),
-        // body("expiration_time").withMessage(constants.VALIDATE_DATA),
-        // body("time_before").withMessage(constants.VALIDATE_DATA),
-        // body("is_notified").withMessage(constants.VALIDATE_DATA),
-        // body("is_received").withMessage(constants.VALIDATE_DATA),
-        // body("update_time").withMessage(constants.VALIDATE_DATA),
-    ],
-    verifyToken,
-    remindController.update,
-);
+router.put('/update/:id', verifyToken, remindController.update);
 
-/**
- * @swagger
- * /items:
- *   post:
- *     summary: Retrieve a list of items
- *     responses:
- *       200:
- *         description: A list of items.
- */
 router.put(
     '/update-is-deleted/:id',
     [param('id', constants.VALIDATE_DATA).isNumeric()],
     verifyToken,
     remindController.updateIsDeleted,
 );
-// yes ==> call api current_kilometers = current_kilometers of result return from api, cumulative_kilometers = cumulative_kilometers of remind_id
-//         expiration_time = Date.now() + (Date.now() - expiration_time of remind_id)
-//         time_before = time_before of remind_id
-//         return {expiration_time, time_before, cumulative_kilometers}
-// no ==> is_received = 1, update_time = Date.now() return {}
+
 router.post(
     '/finish-remind/:id',
     [param('id', constants.VALIDATE_DATA).isNumeric()],
@@ -126,6 +78,12 @@ router.get(
     [param('id', constants.VALIDATE_DATA)],
     verifyToken,
     remindController.getFinishRemind,
+);
+
+router.get(
+    '/get-schedule/:id',
+    verifyToken,
+    remindController.getScheduleByRemindId,
 );
 
 export default (app: Express) => {
