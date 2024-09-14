@@ -151,7 +151,7 @@ class RemindModel extends DatabaseModel {
                    ${tables.tableRemindCategory}.create_time AS category_create_time,
                    ${tables.tableRemindCategory}.update_time AS category_update_time,
                    ${tables.tableRemindCategory}.is_deleted AS category_is_deleted
-                   ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
+                   ${tables.tableTire}.seri AS tire_seri,
                    ${tables.tableTire}.id AS tire,
                    ${tables.tableRemind}.cycle AS cycle
                    `,
@@ -233,6 +233,8 @@ class RemindModel extends DatabaseModel {
                 tables.tableRemind,
                 payload,
             );
+
+            console.log(data?.tire_seri);
 
             const result = await this.insertVehicles(
                 con,

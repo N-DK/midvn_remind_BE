@@ -2,11 +2,11 @@
     "name": "nodejs-temp",
     "version": "1.0.0",
     "description": "A temple typescript with nodejs/express",
-    "main": "src/server.ts",
+    "main": "./server.ts",
     "scripts": {
         "build": "npx tsc",
         "start": "cross-env NODE_OPTIONS=--max-old-space-size=4096 nodemon server.ts",
-        "dev": "tsc -w & nodemon src/server.ts",
+        "dev": "tsc -w & nodemon ./server.ts",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "NDK",
