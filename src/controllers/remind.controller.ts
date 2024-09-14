@@ -48,6 +48,7 @@ class RemindController {
             UPDATE(res, result);
         },
     );
+
     updateNotifiedOn = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             const result = await remindService.updateNotifiedOn(
@@ -56,9 +57,24 @@ class RemindController {
             UPDATE(res, result);
         },
     );
+
     update = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
+            req.body.img_url = null;
+            if (Array.isArray(req.files) && req.files.length > 0) {
+                req.body.img_url = req.files
+                    .map((file) => file.path.replace('src', ''))
+                    .join(', ');
+            }
+
+            if (typeof req.body.vehicles === 'string') {
+                req.body.vehicles = JSON.parse(req.body.vehicles);
+            }
+            if (typeof req.body.schedules === 'string') {
+                req.body.schedules = JSON.parse(req.body.schedules);
+            }
             const data = req.body;
+
             const remind = await remindService.update(
                 data,
                 parseInt(req.params.id),

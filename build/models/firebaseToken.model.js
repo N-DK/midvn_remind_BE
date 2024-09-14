@@ -20,10 +20,10 @@ class TokenFirebase extends database_model_1.default {
     constructor() {
         super();
     }
-    addToken(conn, data, userID) {
+    addToken(conn, data, userID, parentID) {
         return __awaiter(this, void 0, void 0, function* () {
             const tokenIsExist = yield this.select(conn, tableName_constant_1.tables.tableTokenFirebase, '*', 'token = ?', [data.token]);
-            console.log(tokenIsExist);
+            // console.log(tokenIsExist);
             if (tokenIsExist && tokenIsExist.length > 0) {
                 throw new error_response_1.BusinessLogicError('Token đã tồn tại', ['Thêm token mới thất bại'], httpStatusCode_1.StatusCodes.CONFLICT);
             }
@@ -31,6 +31,10 @@ class TokenFirebase extends database_model_1.default {
                 user_id: userID,
                 token: data.token,
                 created_at: Date.now(),
+            });
+            const addToUser = yield this.insert(conn, tableName_constant_1.tables.tableUser, {
+                user_id: userID,
+                parent_id: parentID,
             });
             return result;
         });

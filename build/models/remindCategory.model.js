@@ -35,9 +35,9 @@ class RemindCategoryModel extends database_model_1.default {
             const result = yield this.insert(con, tableName_constant_1.tables.tableRemindCategory, {
                 name: data.name,
                 desc: data.desc,
-                icon: data.icon,
+                icon: data.icon.trim() === '' ? '➕' : data.icon,
                 user_id: userID,
-                create_time: Date.now()
+                create_time: Date.now(),
             });
             return result;
         });

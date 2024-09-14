@@ -22,7 +22,7 @@ class RemindCategoryController {
             (0, success_response_1.GET)(res, data);
         }));
         this.getByUserId = (0, catchAsync_helper_1.default)((req, res, next) => __awaiter(this, void 0, void 0, function* () {
-            const data = yield remindCategory_service_1.default.getByUserID(parseInt(req.body.user.userId));
+            const data = yield remindCategory_service_1.default.getByUserID(req.body.user.userId);
             (0, success_response_1.GET)(res, data);
         }));
         this.addCategory = (0, catchAsync_helper_1.default)((req, res, next) => __awaiter(this, void 0, void 0, function* () {

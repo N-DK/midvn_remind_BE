@@ -15,12 +15,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const init_mysql_1 = require("../dbs/init.mysql");
 const firebaseToken_model_1 = __importDefault(require("../models/firebaseToken.model"));
 class TokenFirebaseService {
-    addToken(data, userID) {
+    addToken(data, userID, parentId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { conn } = yield (0, init_mysql_1.getConnection)();
                 try {
-                    const result = yield firebaseToken_model_1.default.addToken(conn, data, userID);
+                    const result = yield firebaseToken_model_1.default.addToken(conn, data, userID, parentId);
                     return result;
                 }
                 catch (error) {

@@ -27,42 +27,42 @@ const router = express_1.default.Router();
 //     verifyToken,
 //     tireController.search
 //   );
-router.get("/get-all/:vehicleId", verifyToken_middleware_1.verifyToken, (req, res, next) => {
+router.get('/get-all/:vehicleId', verifyToken_middleware_1.verifyToken, (req, res, next) => {
     const { keyword } = req.query;
-    if (typeof keyword === "string" && keyword.trim() !== "") {
+    if (typeof keyword === 'string' && keyword.trim() !== '') {
         tire_controller_1.default.search(req, res, next);
     }
     else {
         tire_controller_1.default.getTireByVehicleId(req, res, next);
     }
 });
-router.post("/add-tire", verifyToken_middleware_1.verifyToken, [
-    (0, express_validator_1.body)("seri", msg_constant_1.default.NOT_EMPTY)
+router.post('/add-tire', [
+    (0, express_validator_1.body)('seri', msg_constant_1.default.NOT_EMPTY)
         .isString()
         .withMessage(msg_constant_1.default.VALIDATE_DATA),
-    (0, express_validator_1.body)("size", msg_constant_1.default.NOT_EMPTY)
+    (0, express_validator_1.body)('size', msg_constant_1.default.NOT_EMPTY)
         .isString()
         .withMessage(msg_constant_1.default.VALIDATE_DATA),
-    (0, express_validator_1.body)("brand", msg_constant_1.default.NOT_EMPTY)
+    (0, express_validator_1.body)('brand', msg_constant_1.default.NOT_EMPTY)
         .isString()
         .withMessage(msg_constant_1.default.VALIDATE_DATA),
-    (0, express_validator_1.body)("license_plate", msg_constant_1.default.NOT_EMPTY)
+    (0, express_validator_1.body)('license_plate', msg_constant_1.default.NOT_EMPTY)
         .isString()
         .withMessage(msg_constant_1.default.VALIDATE_DATA),
-], tire_controller_1.default.addTire);
-router.patch("/delete-tire/:id", verifyToken_middleware_1.verifyToken, tire_controller_1.default.deleteTire);
-router.patch("/restore-tire/:id", verifyToken_middleware_1.verifyToken, tire_controller_1.default.restoreTire);
-router.put("/update-tire/:tire_id", verifyToken_middleware_1.verifyToken, [
-    (0, express_validator_1.body)("seri", msg_constant_1.default.NOT_EMPTY)
+], verifyToken_middleware_1.verifyToken, tire_controller_1.default.addTire);
+router.patch('/delete-tire/:id', verifyToken_middleware_1.verifyToken, tire_controller_1.default.deleteTire);
+router.patch('/restore-tire/:id', verifyToken_middleware_1.verifyToken, tire_controller_1.default.restoreTire);
+router.put('/update-tire/:tire_id', verifyToken_middleware_1.verifyToken, [
+    (0, express_validator_1.body)('seri', msg_constant_1.default.NOT_EMPTY)
         .isString()
         .withMessage(msg_constant_1.default.VALIDATE_DATA),
-    (0, express_validator_1.body)("size", msg_constant_1.default.NOT_EMPTY)
+    (0, express_validator_1.body)('size', msg_constant_1.default.NOT_EMPTY)
         .isString()
         .withMessage(msg_constant_1.default.VALIDATE_DATA),
-    (0, express_validator_1.body)("brand", msg_constant_1.default.NOT_EMPTY)
+    (0, express_validator_1.body)('brand', msg_constant_1.default.NOT_EMPTY)
         .isString()
         .withMessage(msg_constant_1.default.VALIDATE_DATA),
 ], tire_controller_1.default.updateTire);
 exports.default = (app) => {
-    app.use("/api/v1/remind/tire", router);
+    app.use('/api/v1/remind/tire', router);
 };

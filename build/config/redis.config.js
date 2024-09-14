@@ -7,4 +7,5 @@ const dotenv_config_1 = __importDefault(require("./dotenv.config"));
 const { REDIS_HOST, REDIS_PASS, REDIS_PORT } = (0, dotenv_config_1.default)();
 exports.default = {
     url: `redis://:${REDIS_PASS}@${REDIS_HOST}:${REDIS_PORT}`,
+    // url: `redis://default:${REDIS_PASS}@${REDIS_HOST}:${REDIS_PORT}`,
 };

@@ -20,7 +20,8 @@ class TokenFirebaseController {
         this.addFirebaseToken = (0, catchAsync_helper_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
             const userId = req.body.user.userId;
             const data = req.body;
-            const addToken = yield tokenFirebase_service_1.default.addToken(data, userId);
+            const parentID = req.body.user.parentId;
+            const addToken = yield tokenFirebase_service_1.default.addToken(data, userId, parentID);
             (0, success_response_1.CREATED)(res, addToken);
         }));
         this.deleteFirebaseToken = (0, catchAsync_helper_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {

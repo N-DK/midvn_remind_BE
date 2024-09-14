@@ -484,7 +484,7 @@ class RemindModel extends DatabaseModel {
         const remindOld = result[0];
 
         const payload = {
-            img_url: data?.img_url ?? remindOld.img_url,
+            img_url: data?.img_url,
             note_repair: data?.note_repair ?? remindOld.note_repair,
             history_repair: data?.history_repair ?? remindOld.history_repair,
             current_kilometers:
@@ -869,9 +869,7 @@ class RemindModel extends DatabaseModel {
             user: { userId: user_id },
             vehicles,
             expiration_time:
-                (Math.ceil(
-                    new Date(remindOld.expiration_time).getTime() / 1000,
-                ) +
+                (Math.ceil(Date.now() / 1000) +
                     remindOld.cycle * 30 * 24 * 60 * 60) *
                 1000,
             schedules: schedules?.map((s: any) => ({

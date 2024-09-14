@@ -22,23 +22,32 @@ class VehicleNoGPS extends database_model_1.default {
     }
     getAllRowsByUserID(con, userID) {
         return __awaiter(this, void 0, void 0, function* () {
-            const result = yield this.select(con, tableName_constant_1.tables.tableVehicleNoGPS, "id, license_plate, user_id, license", "user_id = ? AND is_deleted = 0", [userID]);
+            const result = yield this.select(con, tableName_constant_1.tables.tableVehicleNoGPS, 'id, license_plate, user_id, license', 'user_id = ? AND is_deleted = 0', [userID]);
             return result;
         });
     }
     getVehicleNoGPSbyID(con, vehicleId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const result = yield this.select(con, tableName_constant_1.tables.tableVehicleNoGPS, "id,license_plate, user_id, license", "id = ? AND is_deleted = 0", [vehicleId]);
+            const result = yield this.select(con, tableName_constant_1.tables.tableVehicleNoGPS, 'id,license_plate, user_id, license', 'id = ? AND is_deleted = 0', [vehicleId]);
             return result;
         });
     }
     addVehicleNoGPS(con, data, userID) {
         return __awaiter(this, void 0, void 0, function* () {
-            let queryText = `INSERT INTO ${tableName_constant_1.tables.tableVehicleNoGPS} (license_plate, user_id, license, create_time, update_time) VALUES `;
+            let queryText = `INSERT INTO ${tableName_constant_1.tables.tableVehicleNoGPS} 
+            (license_plate, user_id, license, create_time, update_time, user_name, user_address) 
+            VALUES `;
             data.forEach((item) => {
-                queryText += `('${item.license_plate}', ${userID}, ${item.license}, ${Date.now()}, ${null}),`;
+                queryText += `('${item.license_plate}', ${userID}, '${item.license}', ${Date.now()}, NULL, '${item.user_name}', '${item.user_address}'),`;
             });
+            // Loại bỏ dấu phẩy cuối cùng để đảm bảo cú pháp SQL hợp lệ
             queryText = queryText.slice(0, -1);
+            // Sử dụng ON DUPLICATE KEY UPDATE để ghi đè thông tin nếu trùng license_plate
+            queryText += ` ON DUPLICATE KEY UPDATE 
+            license = VALUES(license), 
+            user_name = VALUES(user_name), 
+            user_address = VALUES(user_address), 
+            update_time = ${Date.now()}`;
             return new Promise((resolve, reject) => {
                 con.query(queryText, (err, result) => {
                     if (err) {
@@ -57,7 +66,9 @@ class VehicleNoGPS extends database_model_1.default {
                 license_plate: data.license_plate,
                 license: data.license,
                 update_time: Date.now(),
-            }, "id", vehicleID);
+                user_name: data.user_name,
+                user_address: data.user_address,
+            }, 'id', vehicleID);
             return result;
         });
     }
@@ -65,9 +76,9 @@ class VehicleNoGPS extends database_model_1.default {
         return __awaiter(this, void 0, void 0, function* () {
             const check = yield this.getVehicleNoGPSbyID(con, vehicleID);
             if (check[0].user_id !== user_id) {
-                throw new error_response_1.BusinessLogicError("Đã xảy ra lỗi", ["Không được phép"], httpStatusCode_1.StatusCodes.FORBIDDEN);
+                throw new error_response_1.BusinessLogicError('Đã xảy ra lỗi', ['Không được phép'], httpStatusCode_1.StatusCodes.FORBIDDEN);
             }
-            const result = yield this.update(con, tableName_constant_1.tables.tableVehicleNoGPS, { is_deleted: 1 }, "id", vehicleID);
+            const result = yield this.update(con, tableName_constant_1.tables.tableVehicleNoGPS, { is_deleted: 1 }, 'id', vehicleID);
             return result;
         });
     }
@@ -102,17 +113,17 @@ class VehicleNoGPS extends database_model_1.default {
                 {
                     table: tableName_constant_1.tables.tableRemindVehicle,
                     on: `${tableName_constant_1.tables.tableVehicleNoGPS}.license_plate = ${tableName_constant_1.tables.tableRemindVehicle}.vehicle_id`,
-                    type: "INNER",
+                    type: 'INNER',
                 },
                 {
                     table: tableName_constant_1.tables.tableRemind,
                     on: `${tableName_constant_1.tables.tableRemindVehicle}.remind_id = ${tableName_constant_1.tables.tableRemind}.id`,
-                    type: "INNER",
+                    type: 'INNER',
                 },
                 {
                     table: tableName_constant_1.tables.tableRemindCategory,
                     on: `${tableName_constant_1.tables.tableRemind}.remind_category_id = ${tableName_constant_1.tables.tableRemindCategory}.id`,
-                    type: "INNER",
+                    type: 'INNER',
                 },
             ]);
             return result;

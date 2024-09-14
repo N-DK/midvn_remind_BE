@@ -1,16 +1,16 @@
-import { PoolConnection } from 'mysql2';
 import DatabaseModel from '../models/database.model';
-import { getActiveConnections, getConnection } from '../dbs/init.mysql';
+import { getConnection } from '../dbs/init.mysql';
 import { tables } from '../constants/tableName.constant';
 import multer from 'multer';
 import redisModel from '../models/redis.model';
+import scheduleUtil from './schedule.util';
 
 const dataBaseModel = new DatabaseModel();
 
 const storage = multer.diskStorage({
     destination: './src/uploads',
     filename: function (req, file, cb) {
-        return cb(null, file.originalname);
+        return cb(null, `${file.fieldname}-${Date.now()}${file.originalname}`);
     },
 });
 let remindsVehicles: any;
@@ -18,31 +18,86 @@ let remindsVehicles: any;
 const reminder = {
     init: async () => {
         try {
-            // 20s clear remindsVehicles = undefined dùng setInterval
             const isRedisReady = redisModel.redis.instanceConnect.isReady;
+            let interval: any = null;
+
+            // Hàm để lấy dữ liệu từ database
+            const fetchFromDatabase = async () => {
+                console.log('Fetching data from database...');
+                remindsVehicles = await reminder.getReminds();
+            };
+
+            // Hàm để kiểm tra kết nối Redis và cập nhật dữ liệu
+            const checkRedisConnection = async (isResync: boolean) => {
+                if (redisModel.redis.instanceConnect.isReady) {
+                    clearInterval(interval);
+                    interval = null;
+                    console.log('Redis reconnected and data resynced.');
+                    if (isResync) await reminder.resyncReminds();
+                } else {
+                    await fetchFromDatabase();
+                }
+            };
+
+            // Nếu Redis không sẵn sàng, lấy dữ liệu từ database
             if (!isRedisReady) {
-                console.log('CACHE FROM DATABASE -- REDIS NOT READY');
-                remindsVehicles = await new Promise(async (resolve, reject) => {
-                    try {
-                        const result = await reminder.getReminds(); // Gọi phương thức getReminds và đợi nó hoàn tất
-                        resolve(result); // Kết quả từ getReminds được giải quyết
-                    } catch (error) {
-                        reject(error); // Nếu có lỗi, từ chối promise với lỗi đó
-                    }
-                });
-                const interval = setInterval(async () => {
-                    const isRedisReady =
-                        redisModel.redis.instanceConnect.isReady;
-                    console.log('CLEAR REMINDS VEHICLES FROM DATABASE');
-                    if (isRedisReady) {
-                        clearInterval(interval);
-                    } else {
-                        remindsVehicles = await reminder.getReminds();
-                    }
-                }, 1 * 60 * 1000);
+                await fetchFromDatabase();
+
+                // Kiểm tra lại Redis mỗi 60 giây
+                interval = setInterval(
+                    async () => await checkRedisConnection(true),
+                    60 * 1000,
+                );
             }
+
+            // Xử lý sự kiện khi Redis gặp lỗi
+            redisModel.redis.instanceConnect.on('error', async () => {
+                if (!interval) {
+                    console.log(
+                        'Redis connection lost. Switching to database...',
+                    );
+                    await fetchFromDatabase();
+
+                    // Kiểm tra lại Redis mỗi phút để khôi phục kết nối
+                    interval = setInterval(
+                        async () => await checkRedisConnection(false),
+                        60 * 1000,
+                    );
+                }
+            });
+
+            // Xử lý sự kiện khi Redis kết nối lại
+            redisModel.redis.instanceConnect.on('connect', async () => {
+                console.log('Redis connection restored.');
+                await reminder.resyncReminds();
+            });
         } catch (error) {
-            console.log('Error init reminder: ', error);
+            console.error('Error initializing reminder: ', error);
+        }
+    },
+
+    resyncReminds: async () => {
+        try {
+            console.time('RESYNC DATE FROM DATABASE');
+            const reminds: any = await scheduleUtil.getReminds();
+            console.log('Reminds:', reminds?.length);
+
+            await redisModel.del('remind', 'init.redis.ts', Date.now());
+            console.log('Deleted previous reminds in Redis');
+
+            for (const remind of reminds) {
+                await redisModel.hSet(
+                    'remind',
+                    remind.id,
+                    JSON.stringify(remind),
+                    'init.redis.ts',
+                    Date.now(),
+                );
+            }
+
+            console.timeEnd('RESYNC DATE FROM DATABASE');
+        } catch (error) {
+            console.error('Error during resync:', error);
         }
     },
 

@@ -16,4 +16,6 @@ exports.default = {
     waitForConnections: true,
     connectionLimit: 500,
     queueLimit: 1000,
+    keepAliveInitialDelay: 10000, // 0 by default.
+    enableKeepAlive: true, // false by default.
 };

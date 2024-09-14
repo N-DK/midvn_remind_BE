@@ -26,7 +26,7 @@ app.use((0, compression_1.default)({
 }));
 app.use((0, cors_1.default)({ origin: true, credentials: true })); // origin: true cho phép client truy cập.
 // config uploads folder
-app.use(express_1.default.static(path_1.default.join(__dirname, 'uploads')));
+app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, 'uploads')));
 // body-parser config
 const bodyParser = require('body-parser');
 app.use(bodyParser.json({ limit: '10kb' }));
@@ -43,7 +43,6 @@ const mqtt_config_1 = require("./config/mqtt.config");
 // remind
 const reminder_util_1 = __importDefault(require("./utils/reminder.util"));
 reminder_util_1.default.init();
-reminder_util_1.default.start();
 // import routes
 const routes_1 = __importDefault(require("./routes"));
 (0, routes_1.default)(app);

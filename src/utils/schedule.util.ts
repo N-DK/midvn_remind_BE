@@ -78,10 +78,7 @@ class ScheduleUtils {
                         ...other,
                         user: { userId: remind.user_id },
                         expiration_time:
-                            (Math.ceil(
-                                new Date(remind.expiration_time).getTime() /
-                                    1000,
-                            ) +
+                            (Math.ceil(Date.now() / 1000) +
                                 remind.cycle * this.UNIT_MONTH) *
                             1000,
                         schedules: remind.schedules.map((s: any) => ({
@@ -228,7 +225,7 @@ class ScheduleUtils {
         }
     }
 
-    private async getReminds() {
+    public async getReminds() {
         try {
             const { conn } = await getConnection();
             try {

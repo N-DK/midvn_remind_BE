@@ -169,6 +169,7 @@ class DatabaseModel {
         return __awaiter(this, arguments, void 0, function* (db, tableName, where, conditions = [], fieldNameError = 'ID', checkExit = true) {
             return yield new Promise((resolve, reject) => {
                 const query = `DELETE FROM ${tableName} WHERE ${where}`;
+                // console.log(query);
                 db.query(query, conditions, (err, dataRes) => {
                     if (err) {
                         console.log(err);
@@ -218,16 +219,18 @@ class DatabaseModel {
     }
     //----------------------------------------------------
     selectWithJoins(db_1, mainTable_1) {
-        return __awaiter(this, arguments, void 0, function* (db, mainTable, fields = '*', where = '', conditions = [], joins = []) {
+        return __awaiter(this, arguments, void 0, function* (db, mainTable, fields = '*', where = '', conditions = [], joins = [], orderBy = '') {
             return yield new Promise((resolve, reject) => {
+                if (!db) {
+                    return reject({ msg: 'Database connection is required.' });
+                }
                 const joinClauses = joins
                     .map((join) => {
                     const joinType = join.type ? `${join.type} JOIN` : 'JOIN';
                     return `${joinType} ${join.table} ON ${join.on}`;
                 })
                     .join(' ');
-                const query = `SELECT ${fields} FROM ${mainTable} ${joinClauses} WHERE ${where}`;
-                // console.log(query);
+                const query = `SELECT ${fields} FROM ${mainTable} ${joinClauses} WHERE ${where} ${orderBy}`;
                 db.query(query, conditions, (err, dataRes) => {
                     if (err) {
                         console.log(err);

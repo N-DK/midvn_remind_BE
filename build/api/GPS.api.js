@@ -14,12 +14,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const axios_helper_1 = __importDefault(require("../helper/axios.helper"));
 class GPSApi {
-    getGPSData() {
+    getGPSData(token) {
         return __awaiter(this, void 0, void 0, function* () {
-            const url = '/gps';
-            return yield (0, axios_helper_1.default)({
-                method: 'GET',
-                url,
+            const url = '/api/v1/realtime/gps';
+            return yield axios_helper_1.default.get(url, {
+                headers: {
+                    Authorization: 'Bearer ' + token,
+                },
             });
         });
     }

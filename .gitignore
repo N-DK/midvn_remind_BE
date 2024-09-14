@@ -6,7 +6,7 @@
 # Node artifact files
 /src/logs
 node_modules/
-dist/
+/build
 .env
 .env.example
 .env.local

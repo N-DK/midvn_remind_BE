@@ -24,7 +24,7 @@ class Database {
             return yield new Promise((resolve, reject) => {
                 pool.getConnection((err, conn) => {
                     if (err) {
-                        console.log('error when connecting to Database', err);
+                        // console.log('error when connecting to Database', err);
                         return reject({ msg: msg_constant_1.default.SERVER_ERROR });
                     }
                     resolve({ conn, connPromise: conn.promise() });

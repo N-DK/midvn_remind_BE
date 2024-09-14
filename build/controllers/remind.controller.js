@@ -26,6 +26,17 @@ class RemindController {
             (0, success_response_1.GET)(res, data);
         }));
         this.addRemind = (0, catchAsync_helper_1.default)((req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            if (Array.isArray(req.files) && req.files.length > 0) {
+                req.body.img_url = req.files
+                    .map((file) => file.path.replace('src', ''))
+                    .join(', ');
+            }
+            if (typeof req.body.vehicles === 'string') {
+                req.body.vehicles = JSON.parse(req.body.vehicles);
+            }
+            if (typeof req.body.schedules === 'string') {
+                req.body.schedules = JSON.parse(req.body.schedules);
+            }
             const data = req.body;
             const remind = yield remind_service_1.default.addRemind(data);
             (0, success_response_1.CREATED)(res, remind);
@@ -39,6 +50,18 @@ class RemindController {
             (0, success_response_1.UPDATE)(res, result);
         }));
         this.update = (0, catchAsync_helper_1.default)((req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            req.body.img_url = null;
+            if (Array.isArray(req.files) && req.files.length > 0) {
+                req.body.img_url = req.files
+                    .map((file) => file.path.replace('src', ''))
+                    .join(', ');
+            }
+            if (typeof req.body.vehicles === 'string') {
+                req.body.vehicles = JSON.parse(req.body.vehicles);
+            }
+            if (typeof req.body.schedules === 'string') {
+                req.body.schedules = JSON.parse(req.body.schedules);
+            }
             const data = req.body;
             const remind = yield remind_service_1.default.update(data, parseInt(req.params.id));
             (0, success_response_1.UPDATE)(res, remind);
@@ -50,6 +73,29 @@ class RemindController {
         this.updateIsDeleted = (0, catchAsync_helper_1.default)((req, res, next) => __awaiter(this, void 0, void 0, function* () {
             const result = yield remind_service_1.default.updateIsDeleted(parseInt(req.params.id));
             (0, success_response_1.UPDATE)(res, result);
+        }));
+        this.finishRemind = (0, catchAsync_helper_1.default)((req, res, Next) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            const result = yield remind_service_1.default.finishRemind(parseInt(req.params.id), ((_b = (_a = req.body) === null || _a === void 0 ? void 0 : _a.user) === null || _b === void 0 ? void 0 : _b.level) === 10
+                ? req.body.user.userId
+                : req.body.user.parentId);
+            (0, success_response_1.UPDATE)(res, result);
+        }));
+        this.getFinishRemind = (0, catchAsync_helper_1.default)((req, res, Next) => __awaiter(this, void 0, void 0, function* () {
+            const result = yield remind_service_1.default.getFinishRemind(req.params.id, req.body.user.userId);
+            (0, success_response_1.GET)(res, result);
+        }));
+        this.getAllGPS = (0, catchAsync_helper_1.default)((req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            const data = yield remind_service_1.default.getAllGPS(req.query);
+            (0, success_response_1.GET)(res, data);
+        }));
+        this.getCategoryAll = (0, catchAsync_helper_1.default)((req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            const data = yield remind_service_1.default.getCategoryAll(req.body.user.userId);
+            (0, success_response_1.GET)(res, data);
+        }));
+        this.getScheduleByRemindId = (0, catchAsync_helper_1.default)((req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            const data = yield remind_service_1.default.getScheduleByRemindId(parseInt(req.params.id));
+            (0, success_response_1.GET)(res, data);
         }));
     }
 }

@@ -1,4 +1,3 @@
-import { RedisClientType } from 'redis';
 import { getRedis } from '../dbs/init.redis';
 import { mylogger } from '../logger';
 

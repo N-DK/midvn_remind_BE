@@ -168,5 +168,105 @@ class RemindService {
             }
         });
     }
+    finishRemind(remindID, user_id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { conn } = yield (0, init_mysql_1.getConnection)();
+                try {
+                    const remind = yield remind_model_1.default.finishRemind(conn, remindID, user_id);
+                    return remind;
+                }
+                catch (error) {
+                    throw error;
+                }
+                finally {
+                    conn.release();
+                }
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+    }
+    getFinishRemind(vehicleID, user_id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { conn } = yield (0, init_mysql_1.getConnection)();
+                try {
+                    const remind = yield remind_model_1.default.getFinishRemind(conn, vehicleID, user_id);
+                    return remind;
+                }
+                catch (error) {
+                    throw error;
+                }
+                finally {
+                    conn.release();
+                }
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+    }
+    getAllGPS(query) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { conn } = yield (0, init_mysql_1.getConnection)();
+                try {
+                    const result = yield remind_model_1.default.getAllGPS(query);
+                    return result;
+                }
+                catch (error) {
+                    throw error;
+                }
+                finally {
+                    conn.release();
+                }
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+    }
+    getCategoryAll(userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { conn } = yield (0, init_mysql_1.getConnection)();
+                try {
+                    const result = yield remind_model_1.default.getCategoryAll(userId);
+                    return result;
+                }
+                catch (error) {
+                    throw error;
+                }
+                finally {
+                    conn;
+                }
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+    }
+    getScheduleByRemindId(remindID) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { conn } = yield (0, init_mysql_1.getConnection)();
+                try {
+                    const result = yield remind_model_1.default.getScheduleByRemindId(remindID);
+                    return result;
+                }
+                catch (error) {
+                    throw error;
+                }
+                finally {
+                    conn.release();
+                }
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+    }
 }
 exports.default = new RemindService();

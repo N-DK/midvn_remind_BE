@@ -57,7 +57,12 @@ router.patch(
     remindController.updateNotifiedOn,
 );
 
-router.put('/update/:id', verifyToken, remindController.update);
+router.put(
+    '/update/:id',
+    reminder.upload.array('images', 10),
+    verifyToken,
+    remindController.update,
+);
 
 router.put(
     '/update-is-deleted/:id',
