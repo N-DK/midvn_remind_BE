@@ -151,7 +151,7 @@ class RemindService {
             );
         }
     }
-    async finishRemind(remindID: number, user_id: number) {
+    async finishRemind(remindID: number, user_id: number, data: any) {
         try {
             const { conn } = await getConnection();
             try {
@@ -159,6 +159,7 @@ class RemindService {
                     conn,
                     remindID,
                     user_id,
+                    data,
                 );
                 return remind;
             } catch (error) {

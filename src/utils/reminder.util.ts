@@ -4,6 +4,7 @@ import { tables } from '../constants/tableName.constant';
 import multer from 'multer';
 import redisModel from '../models/redis.model';
 import scheduleUtil from './schedule.util';
+import path from 'path';
 
 const dataBaseModel = new DatabaseModel();
 
@@ -21,13 +22,12 @@ const reminder = {
             const isRedisReady = redisModel.redis.instanceConnect.isReady;
             let interval: any = null;
 
-            // Hàm để lấy dữ liệu từ database
             const fetchFromDatabase = async () => {
-                console.log('Fetching data from database...');
-                remindsVehicles = await reminder.getReminds();
+                console.time('Fetching data from database...');
+                remindsVehicles = await reminder.getReminds(true);
+                console.timeEnd('Fetching data from database...');
             };
 
-            // Hàm để kiểm tra kết nối Redis và cập nhật dữ liệu
             const checkRedisConnection = async (isResync: boolean) => {
                 if (redisModel.redis.instanceConnect.isReady) {
                     clearInterval(interval);
@@ -39,18 +39,15 @@ const reminder = {
                 }
             };
 
-            // Nếu Redis không sẵn sàng, lấy dữ liệu từ database
             if (!isRedisReady) {
                 await fetchFromDatabase();
 
-                // Kiểm tra lại Redis mỗi 60 giây
                 interval = setInterval(
                     async () => await checkRedisConnection(true),
-                    60 * 1000,
+                    10 * 1000,
                 );
             }
 
-            // Xử lý sự kiện khi Redis gặp lỗi
             redisModel.redis.instanceConnect.on('error', async () => {
                 if (!interval) {
                     console.log(
@@ -58,7 +55,6 @@ const reminder = {
                     );
                     await fetchFromDatabase();
 
-                    // Kiểm tra lại Redis mỗi phút để khôi phục kết nối
                     interval = setInterval(
                         async () => await checkRedisConnection(false),
                         60 * 1000,
@@ -66,7 +62,6 @@ const reminder = {
                 }
             });
 
-            // Xử lý sự kiện khi Redis kết nối lại
             redisModel.redis.instanceConnect.on('connect', async () => {
                 console.log('Redis connection restored.');
                 await reminder.resyncReminds();
@@ -152,9 +147,11 @@ const reminder = {
         } catch (error) {}
     },
 
-    getReminds: async () => {
+    getReminds: async (isResync: boolean) => {
         try {
-            if (!remindsVehicles) {
+            if (!remindsVehicles || isResync) {
+                // console.log('Resyncing data from database...');
+
                 const { conn } = await getConnection();
 
                 try {
@@ -188,12 +185,15 @@ const reminder = {
                     });
 
                     remindsVehicles = groupByVehicleId;
+
+                    return groupByVehicleId;
                 } catch (error) {
                 } finally {
                     conn.release();
                 }
-                return remindsVehicles;
+                // return remindsVehicles;
             }
+            return remindsVehicles;
         } catch (error) {}
     },
 
@@ -262,7 +262,6 @@ const reminder = {
         }
     },
 
-    // Hàm gom nhóm các phần tử trong vehicles
     groupVehiclesWithObjects: async (imei: any) => {
         const results = await redisModel.hGetAll(
             'remind',
@@ -292,27 +291,25 @@ const reminder = {
 
         return grouped[imei];
     },
-    // Cấu hình upload
-    upload: multer({ storage }),
+
+    upload: multer({
+        storage,
+        // limits: { fileSize: 1024 * 1024 * 5 }, // Giới hạn kích thước file 5MB
+        fileFilter: (req, file, cb) => {
+            const filetypes = /jpeg|jpg|png|gif/;
+            const extname = filetypes.test(
+                path.extname(file.originalname).toLowerCase(),
+            );
+
+            const mimetype = filetypes.test(file.mimetype);
+
+            if (mimetype && extname) {
+                return cb(null, true);
+            } else {
+                cb(new Error('Only images are allowed!'));
+            }
+        },
+    }),
 };
-
-// multer({
-//     storage,
-//     // limits: { fileSize: 1024 * 1024 * 5 }, // Giới hạn kích thước file 5MB
-//     fileFilter: (req, file, cb) => {
-//         const filetypes = /jpeg|jpg|png|gif/;
-//         const extname = filetypes.test(
-//             path.extname(file.originalname).toLowerCase(),
-//         );
-
-//         const mimetype = filetypes.test(file.mimetype);
-
-//         if (mimetype && extname) {
-//             return cb(null, true);
-//         } else {
-//             cb(new Error('Only images are allowed!'));
-//         }
-//     },
-// }),
 
 export default reminder;

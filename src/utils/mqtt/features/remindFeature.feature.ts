@@ -5,9 +5,13 @@ import reminder from '../../reminder.util';
 import configureEnvironment from '../../../config/dotenv.config';
 
 const { SV_NOTIFY } = configureEnvironment();
-
+// const LIMIT = 5000;
+// let count: number = 0;
 const remindFeature = async (client: any, data: any, requestId: any) => {
     const isRedisReady = redisModel.redis.instanceConnect.isReady;
+    // if (count > LIMIT) count = 0;
+    // count++;
+    // const isResync = count > LIMIT;
 
     try {
         // Kiểm tra nếu không có dữ liệu hợp lệ
@@ -21,7 +25,8 @@ const remindFeature = async (client: any, data: any, requestId: any) => {
                 (await reminder.groupVehiclesWithObjects(data.imei)) || [];
         } else {
             // Lấy remind từ nguồn khác nếu Redis không sẵn sàng
-            const result = await reminder.getReminds();
+            const result = await reminder.getReminds(false);
+
             reminds = result?.[data.imei] || [];
         }
 
@@ -56,24 +61,3 @@ const processRemind = async (data: any, reminds: any[]) => {
 };
 
 export { remindFeature };
-
-// if (data.imei === '2102000171') console.log('remindFeature', data);
-
-// if (isRedisReady) {
-//     const { data } = await redisModel.hGetAll(
-//         'remind',
-//         'remindFeature',
-//         requestId,
-//     );
-
-//     const results = Object.values(data)
-//         .map((item: any) => JSON.parse(item))
-//         .filter((item: any) => item.current_kilometers > 0);
-
-//     reminds = results;
-// }
-
-// if (reminds.length === 0) {
-//     console.log('===>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', reminds);
-//     reminds = await reminder.get(data.imei);
-// }

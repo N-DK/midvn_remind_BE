@@ -8,7 +8,11 @@ class TokenFirebaseController {
         const userId = req.body.user.userId;
         const data = req.body;
         const parentID = req.body.user.parentId;
-        const addToken = await VehicleNoGPSService.addToken(data, userId,parentID);
+        const addToken = await VehicleNoGPSService.addToken(
+            data,
+            userId,
+            parentID,
+        );
         CREATED(res, addToken);
     });
 

@@ -14,12 +14,12 @@ class TireController {
     search = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             const vehicleID = req.params.vehicleId;
-            const {keyword} = req.query;
+            const { keyword } = req.query;
             const dataBody = { vehicleID, keyword };
             const data = await tireService.search(dataBody);
             GET(res, data);
-        }
-    )
+        },
+    );
     addTire = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             // { seri, size, brand, vehicleId }
@@ -54,7 +54,6 @@ class TireController {
             UPDATE(res, tire);
         },
     );
-
 }
 
 export default new TireController();

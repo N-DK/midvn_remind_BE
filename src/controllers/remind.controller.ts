@@ -107,6 +107,7 @@ class RemindController {
                 req.body?.user?.level === 10
                     ? req.body.user.userId
                     : req.body.user.parentId,
+                req.body,
             );
             UPDATE(res, result);
         },

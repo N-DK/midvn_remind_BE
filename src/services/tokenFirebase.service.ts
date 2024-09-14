@@ -2,13 +2,17 @@ import { BusinessLogicError } from '../core/error.response';
 import { getConnection } from '../dbs/init.mysql';
 import TokenFirebase from '../models/firebaseToken.model';
 
-
 class TokenFirebaseService {
-    async addToken(data:any , userID: number, parentId: number){
+    async addToken(data: any, userID: number, parentId: number) {
         try {
             const { conn } = await getConnection();
             try {
-                const result = await TokenFirebase.addToken(conn, data, userID,parentId);
+                const result = await TokenFirebase.addToken(
+                    conn,
+                    data,
+                    userID,
+                    parentId,
+                );
                 return result;
             } catch (error) {
                 throw error;
@@ -19,8 +23,8 @@ class TokenFirebaseService {
             throw error;
         }
     }
-    async deleteToken(data:any){
-        try{
+    async deleteToken(data: any) {
+        try {
             const { conn } = await getConnection();
             try {
                 const result = await TokenFirebase.deleteToken(conn, data);
@@ -30,7 +34,7 @@ class TokenFirebaseService {
             } finally {
                 conn.release();
             }
-        }catch (error: any) {
+        } catch (error: any) {
             throw error;
         }
     }

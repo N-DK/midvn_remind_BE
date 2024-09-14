@@ -4,9 +4,9 @@
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
 # Node artifact files
-/src/logs
+/src/logs/
 node_modules/
-/build
+build/
 .env
 .env.example
 .env.local
