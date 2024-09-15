@@ -15,6 +15,7 @@ const storage = multer.diskStorage({
     },
 });
 let remindsVehicles: any;
+let isProcess = false;
 
 const reminder = {
     init: async () => {
@@ -149,9 +150,9 @@ const reminder = {
 
     getReminds: async (isResync: boolean) => {
         try {
-            if (!remindsVehicles || isResync) {
-                // console.log('Resyncing data from database...');
-
+            if ((!remindsVehicles && !isProcess) || isResync) {
+                console.log('Resyncing data from database...');
+                isProcess = true;
                 const { conn } = await getConnection();
 
                 try {
@@ -185,14 +186,15 @@ const reminder = {
                     });
 
                     remindsVehicles = groupByVehicleId;
-
+                    isProcess = remindsVehicles ? false : true;
                     return groupByVehicleId;
                 } catch (error) {
                 } finally {
+                    isProcess = remindsVehicles ? false : true;
                     conn.release();
                 }
-                // return remindsVehicles;
             }
+            isProcess = remindsVehicles ? false : true;
             return remindsVehicles;
         } catch (error) {}
     },
