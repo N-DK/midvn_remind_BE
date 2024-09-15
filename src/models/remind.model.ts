@@ -588,29 +588,35 @@ class RemindModel extends DatabaseModel {
                 remindID,
             );
             const schedules: any = await scheduleUtils.buildSchedule(remindID);
-            const cumulative_kilometers =
+            const current_kilometers =
                 await this.getCurrentKilometersByVehicleId(
                     vehicles[0],
                     data?.token,
                 );
             const payload = {
-                note_repair: remindOld.note_repair,
-                current_kilometers: remindOld.current_kilometers,
-                cumulative_kilometers: cumulative_kilometers,
-                km_before: remindOld.km_before,
-                remind_category_id: remindOld.remind_category_id,
-                cycle: remindOld.cycle,
+                note_repair: data?.note_repair ?? remindOld.note_repair,
+                current_kilometers: current_kilometers,
+                cumulative_kilometers:
+                    data?.cumulative_kilometers ??
+                    remindOld.cumulative_kilometers,
+                km_before: data?.km_before ?? remindOld.km_before,
+                remind_category_id:
+                    data?.remind_category_id ?? remindOld.remind_category_id,
+                cycle: data?.cycle ?? remindOld.cycle,
                 user: { userId: user_id },
                 vehicles,
                 expiration_time:
+                    data?.expiration_time ??
                     (Math.ceil(Date.now() / 1000) +
                         remindOld.cycle * UNIT_MONTH) *
-                    1000,
-                schedules: schedules?.map((s: any) => ({
+                        1000,
+                schedules: (data?.schedules ?? schedules)?.map((s: any) => ({
                     ...s,
                     start: s.start + remindOld.cycle * UNIT_MONTH * 1000,
                     end: s.end + remindOld.cycle * UNIT_MONTH * 1000,
                 })),
+                tire_seri: data?.tire_seri,
+                create_time: Date.now(),
             };
             await remindService.update({ is_received: 1 }, remindID);
             await remindService.addRemind(payload);
