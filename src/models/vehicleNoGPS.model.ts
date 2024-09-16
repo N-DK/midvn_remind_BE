@@ -44,15 +44,14 @@ class VehicleNoGPS extends DatabaseModel {
             }'),`;
         });
 
-        // Loại bỏ dấu phẩy cuối cùng để đảm bảo cú pháp SQL hợp lệ
         queryText = queryText.slice(0, -1);
 
-        // Sử dụng ON DUPLICATE KEY UPDATE để ghi đè thông tin nếu trùng license_plate
         queryText += ` ON DUPLICATE KEY UPDATE 
             license = VALUES(license), 
             user_name = VALUES(user_name), 
             user_address = VALUES(user_address), 
-            update_time = ${Date.now()}`;
+            update_time = ${Date.now()}
+            is_delete = 0`;
 
         return new Promise((resolve, reject) => {
             con.query(queryText, (err: any, result: any) => {
