@@ -164,7 +164,7 @@ class RemindModel extends DatabaseModel {
                     type: 'LEFT',
                 },
             ],
-            `ORDER BY ${tables.tableRemind}.id IS NULL, ${tables.tableRemind}.expiration_time ASC`,
+            `ORDER BY ${tables.tableVehicleNoGPS}.id DESC`,
         );
 
         return result;
