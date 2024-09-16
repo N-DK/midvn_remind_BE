@@ -225,7 +225,7 @@ class RemindModel extends DatabaseModel {
                    ${tables.tableRemind}.cycle AS cycle
                    `,
 
-            `${tables.tableVehicleNoGPS}.license_plate = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0`,
+            `${tables.tableVehicleNoGPS}.license_plate = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND ${tables.tableRemind}.is_deleted = 0`,
             [vehicleID],
             [
                 {

@@ -10,11 +10,14 @@ const router: Router = express.Router();
 router.get('/get-all', verifyToken, (req, res, next) => {
     const { keyword, vehicle_id } = req.query;
     if (
-        (typeof keyword === 'string' && keyword.trim() !== '') ||
-        (typeof vehicle_id === 'string' && vehicle_id.trim())
+        (typeof keyword === 'string' && keyword.trim() !== '')
     ) {
         remindController.search(req, res, next);
-    } else {
+    }else if((typeof vehicle_id === 'string' && vehicle_id.trim())){
+        req.params.id = vehicle_id;
+        remindController.getByVehicleId
+    } 
+    else {
         remindController.getAll(req, res, next);
     }
 });
