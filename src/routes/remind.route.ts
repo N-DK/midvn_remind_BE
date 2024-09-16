@@ -11,7 +11,7 @@ router.get('/get-all', verifyToken, (req, res, next) => {
     const { keyword, vehicle_id } = req.query;
     if (typeof keyword === 'string' && keyword.trim() !== '') {
         remindController.search(req, res, next);
-    } else if (typeof vehicle_id === 'string' && vehicle_id.trim()) {
+    } else if (typeof vehicle_id === 'string' && vehicle_id.trim() !== '') {
         remindController.getByVehicleId(req, res, next);
     } else {
         remindController.getAll(req, res, next);

@@ -24,7 +24,9 @@ class RemindController {
         async (req: Request, res: Response, next: NextFunction) => {
             if (Array.isArray(req.files) && req.files.length > 0) {
                 req.body.img_url = req.files
-                    .map((file) => file.path.replace('src', ''))
+                    .map((file) =>
+                        file.path.replace(`src\\`, '').replace('build\\', ''),
+                    )
                     .join(', ');
             }
 
@@ -65,7 +67,9 @@ class RemindController {
             req.body.img_url = null;
             if (Array.isArray(req.files) && req.files.length > 0) {
                 req.body.img_url = req.files
-                    .map((file) => file.path.replace('src', ''))
+                    .map((file) =>
+                        file.path.replace(`src\\`, '').replace('build\\', ''),
+                    )
                     .join(', ');
             }
 
@@ -77,7 +81,7 @@ class RemindController {
             }
             const data = req.body;
 
-            console.log('data', data);
+            // console.log('data', data);
 
             const remind = await remindService.update(
                 data,
@@ -108,7 +112,9 @@ class RemindController {
         async (req: Request, res: Response, Next: NextFunction) => {
             if (Array.isArray(req.files) && req.files.length > 0) {
                 req.body.img_url = req.files
-                    .map((file) => file.path.replace('src', ''))
+                    .map((file) =>
+                        file.path.replace(`src\\`, '').replace('build\\', ''),
+                    )
                     .join(', ');
             }
 

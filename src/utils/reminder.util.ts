@@ -5,11 +5,19 @@ import multer from 'multer';
 import redisModel from '../models/redis.model';
 import scheduleUtil from './schedule.util';
 import path from 'path';
+import fs from 'fs';
+import appRoot from 'app-root-path';
 
 const dataBaseModel = new DatabaseModel();
 
+const uploadDir = path.join('./build/src/uploads');
+
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
-    destination: './src/uploads',
+    destination: uploadDir,
     filename: function (req, file, cb) {
         return cb(null, `${file.fieldname}-${Date.now()}${file.originalname}`);
     },

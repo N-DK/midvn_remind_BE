@@ -225,7 +225,7 @@ class RemindModel extends DatabaseModel {
                    ${tables.tableRemind}.cycle AS cycle
                    `,
 
-            `${tables.tableVehicleNoGPS}.license_plate = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND ${tables.tableRemind}.is_deleted = 0`,
+            `${tables.tableVehicleNoGPS}.license_plate = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND ${tables.tableRemind}.is_deleted = 0 AND ${tables.tableRemind}.is_received = 0`,
             [vehicleID],
             [
                 {
@@ -298,9 +298,7 @@ class RemindModel extends DatabaseModel {
                 : ''
         } AND ${
             tables.tableVehicleNoGPS
-        }.is_deleted = 0 AND is_received = 0 AND ${
-            tables.tableRemind
-        }.is_deleted = 0 AND
+        }.is_deleted = 0 AND is_received = 0 AND 
               (         note_repair LIKE '%${query.keyword}%' OR
                   cumulative_kilometers LIKE '%${query.keyword}%' OR
                   ${tables.tableRemindCategory}.name LIKE '%${
@@ -314,7 +312,6 @@ class RemindModel extends DatabaseModel {
         if (query.remind_category_id) {
             whereClause += ` AND ${tables.tableRemind}.remind_category_id = ${query.remind_category_id}`;
         }
-
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
@@ -733,7 +730,7 @@ class RemindModel extends DatabaseModel {
             );
 
             // thêm 1 lịch trình
-            if (payload.is_notified === 0 && data?.schedules) {
+            if (Number(payload.is_notified) === 0 && data?.schedules) {
                 for (const schedule of data?.schedules) {
                     await this.handleSchedule(schedule, remind, data?.vehicles);
                 }
@@ -777,8 +774,8 @@ class RemindModel extends DatabaseModel {
             remindID,
         );
 
-        if (data?.schedules && payload.is_notified === 0) {
-            await this.delete(
+        if (data?.schedules && Number(payload.is_notified) === 0) {
+            const result = await this.delete(
                 con,
                 tables.tableRemindSchedule,
                 `remind_id = ${remindID}`,
