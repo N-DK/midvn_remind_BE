@@ -224,7 +224,7 @@ const reminder = {
                     conn,
                     tables.tableRemindVehicle,
                     `vehicle_id, icon`,
-                    `${tables.tableRemind}.user_id = ? AND is_received = 0`,
+                    `${tables.tableRemind}.user_id = ? AND is_received = 0 AND ${tables.tableRemind}.is_deleted = 0`,
                     [userId],
                     [
                         {

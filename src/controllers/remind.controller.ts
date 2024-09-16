@@ -13,7 +13,9 @@ class RemindController {
 
     getByVehicleId = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
-            const data = await remindService.getByVehicleId(req.params.id);
+            const data = await remindService.getByVehicleId(
+                req.query.vehicle_id as string,
+            );
             GET(res, data);
         },
     );
@@ -164,12 +166,10 @@ class RemindController {
 
     deleteMultiRemind = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
-            const result = await remindService.deleteMultiRemind(
-                req.body
-            );
+            const result = await remindService.deleteMultiRemind(req.body);
             UPDATE(res, result);
         },
-    )
+    );
 }
 
 export default new RemindController();

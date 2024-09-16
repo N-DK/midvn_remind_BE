@@ -213,13 +213,13 @@ class RemindModel extends DatabaseModel {
                    ${tables.tableRemind}.create_time AS remind_create_time,
                    ${tables.tableRemind}.update_time AS remind_update_time,
                    
-                   ${tables.tableRemindCategory}.id AS category_id,
+                   ${tables.tableRemindCategory}.id AS remind_category_id,
                    ${tables.tableRemindCategory}.name AS category_name,
                    ${tables.tableRemindCategory}.desc AS category_desc,
                    ${tables.tableRemindCategory}.icon AS category_icon,
                    ${tables.tableRemindCategory}.create_time AS category_create_time,
                    ${tables.tableRemindCategory}.update_time AS category_update_time,
-                   ${tables.tableRemindCategory}.is_deleted AS category_is_deleted
+                   ${tables.tableRemindCategory}.is_deleted AS category_is_deleted,
                    ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
                    ${tables.tableTire}.id AS tire,
                    ${tables.tableRemind}.cycle AS cycle
@@ -298,7 +298,9 @@ class RemindModel extends DatabaseModel {
                 : ''
         } AND ${
             tables.tableVehicleNoGPS
-        }.is_deleted = 0 AND is_received = 0 AND 
+        }.is_deleted = 0 AND is_received = 0 AND ${
+            tables.tableRemind
+        }.is_deleted = 0 AND
               (         note_repair LIKE '%${query.keyword}%' OR
                   cumulative_kilometers LIKE '%${query.keyword}%' OR
                   ${tables.tableRemindCategory}.name LIKE '%${
