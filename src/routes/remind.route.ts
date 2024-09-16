@@ -15,7 +15,7 @@ router.get('/get-all', verifyToken, (req, res, next) => {
         remindController.search(req, res, next);
     }else if((typeof vehicle_id === 'string' && vehicle_id.trim())){
         req.params.id = vehicle_id;
-        remindController.getByVehicleId
+        remindController.getByVehicleId(req, res, next);
     } 
     else {
         remindController.getAll(req, res, next);
