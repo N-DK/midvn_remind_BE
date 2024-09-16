@@ -92,6 +92,12 @@ router.get(
     remindController.getScheduleByRemindId,
 );
 
+router.post(
+    '/delete-multi-remind',
+    verifyToken,
+    remindController.deleteMultiRemind,
+)
+
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);
 };

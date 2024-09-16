@@ -161,6 +161,15 @@ class RemindController {
             GET(res, data);
         },
     );
+
+    deleteMultiRemind = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const result = await remindService.deleteMultiRemind(
+                req.body
+            );
+            UPDATE(res, result);
+        },
+    )
 }
 
 export default new RemindController();
