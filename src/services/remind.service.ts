@@ -240,6 +240,22 @@ class RemindService {
             throw error;
         }
     }
+
+    async deleteMultiRemind(data: any) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindModel.deleteMultiRemind(conn, data);
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindService();
