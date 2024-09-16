@@ -219,7 +219,7 @@ class RemindModel extends DatabaseModel {
                    ${tables.tableRemindCategory}.icon AS category_icon,
                    ${tables.tableRemindCategory}.create_time AS category_create_time,
                    ${tables.tableRemindCategory}.update_time AS category_update_time,
-                   ${tables.tableRemindCategory}.is_deleted AS category_is_deleted
+                   ${tables.tableRemindCategory}.is_deleted AS category_is_deleted,
                    ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
                    ${tables.tableTire}.id AS tire,
                    ${tables.tableRemind}.cycle AS cycle
