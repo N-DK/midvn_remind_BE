@@ -20,7 +20,8 @@ class Database {
     init() {
         pool.getConnection(function (err, conn) {
             if (err) {
-                return console.log('error when connecting to Database', err);
+                // console.log('error when connecting to Database', err)
+                return;
             } else {
                 console.log(
                     `SUCCESS:: CONNECTED TO DATABASE >> ${dbConfig.host}`,

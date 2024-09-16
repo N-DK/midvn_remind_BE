@@ -20,7 +20,7 @@ let isProcess = false;
 const reminder = {
     init: async () => {
         try {
-            const isRedisReady = redisModel.redis.instanceConnect.isReady;
+            const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
             let interval: any = null;
 
             const fetchFromDatabase = async () => {
@@ -30,7 +30,7 @@ const reminder = {
             };
 
             const checkRedisConnection = async (isResync: boolean) => {
-                if (redisModel.redis.instanceConnect.isReady) {
+                if (redisModel?.redis?.instanceConnect?.isReady) {
                     clearInterval(interval);
                     interval = null;
                     console.log('Redis reconnected and data resynced.');
@@ -49,7 +49,7 @@ const reminder = {
                 );
             }
 
-            redisModel.redis.instanceConnect.on('error', async () => {
+            redisModel?.redis?.instanceConnect?.on('error', async () => {
                 if (!interval) {
                     console.log(
                         'Redis connection lost. Switching to database...',
@@ -63,7 +63,7 @@ const reminder = {
                 }
             });
 
-            redisModel.redis.instanceConnect.on('connect', async () => {
+            redisModel?.redis?.instanceConnect?.on('connect', async () => {
                 console.log('Redis connection restored.');
                 await reminder.resyncReminds();
             });
@@ -98,7 +98,7 @@ const reminder = {
     },
 
     getRemindsByVehicleId: async (vehicleId: string) => {
-        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        // const isRedisReady =  redisModel?.redis?.instanceConnect?.isReady;
 
         // if (isRedisReady) {
         //     const { data } = await redisModel.hGetAll(
@@ -200,7 +200,7 @@ const reminder = {
     },
 
     getCategoryAllByUserId: async (userId: number) => {
-        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        // const isRedisReady =  redisModel?.redis?.instanceConnect?.isReady;
 
         // if (isRedisReady) {
         //     const { data } = await redisModel.hGetAll(
@@ -296,7 +296,7 @@ const reminder = {
 
     upload: multer({
         storage,
-        // limits: { fileSize: 1024 * 1024 * 5 }, // Giới hạn kích thước file 5MB
+        limits: { fileSize: 1024 * 1024 * 2 }, // Giới hạn kích thước file 2MB
         fileFilter: (req, file, cb) => {
             const filetypes = /jpeg|jpg|png|gif/;
             const extname = filetypes.test(

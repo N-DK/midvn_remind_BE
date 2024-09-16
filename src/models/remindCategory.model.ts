@@ -18,13 +18,14 @@ class RemindCategoryModel extends DatabaseModel {
         return result;
     }
     async getByUserID(con: PoolConnection, userID: number) {
-        const result = await this.select(
+        const result: any = await this.select(
             con,
             tables.tableRemindCategory,
             '*',
             'user_id = ? OR user_id IS NULL',
             [userID],
         );
+
         return result;
     }
     async addCategory(con: PoolConnection, data: any, userID: number) {

@@ -86,13 +86,84 @@ class RemindModel extends DatabaseModel {
     ];
 
     async getAll(con: PoolConnection, userID: number) {
+        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        // if (isRedisReady) {
+        //     const { data } = await redisModel.hGetAll(
+        //         'remind',
+        //         'remind.model.ts',
+        //         Date.now(),
+        //     );
+
+        //     // filter reminds by user_id and is_deleted = 0
+        //     const reminds: any = Object.values(data)
+        //         .filter(
+        //             (remind: any) =>
+        //                 JSON.parse(remind).user_id === userID &&
+        //                 JSON.parse(remind).is_deleted === 0,
+        //         )
+        //         .map((item: any) => JSON.parse(item));
+        //     return reminds;
+        // }
+
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
-            `${this.vehicleColumns}, ${this.remindColumns}, ${this.remindCategoryColumns}, ${this.tireColumns}`,
+            `${tables.tableVehicleNoGPS}.id AS vehicle_id,
+                 ${tables.tableVehicleNoGPS}.license_plate AS license_plate,
+                 ${tables.tableVehicleNoGPS}.user_id AS user_id,
+                 ${tables.tableVehicleNoGPS}.license AS license,
+                 ${tables.tableVehicleNoGPS}.create_time AS vehicle_create_time,
+                 ${tables.tableVehicleNoGPS}.update_time AS vehicle_update_time,
+                 ${tables.tableVehicleNoGPS}.user_name AS user_name,
+                 ${tables.tableVehicleNoGPS}.user_address AS user_address,
+  
+                 ${tables.tableRemind}.id AS remind_id,
+                 ${tables.tableRemind}.img_url AS remind_img_url,
+                 ${tables.tableRemind}.note_repair AS note_repair,
+                 ${tables.tableRemind}.history_repair AS history_repair,
+                 ${tables.tableRemind}.current_kilometers AS current_kilometers,
+                 ${tables.tableRemind}.cumulative_kilometers AS cumulative_kilometers,
+                 ${tables.tableRemind}.expiration_time AS expiration_time,
+                 ${tables.tableRemind}.is_notified AS is_notified,
+                 ${tables.tableRemind}.is_received AS is_received,
+                 ${tables.tableRemind}.create_time AS remind_create_time,
+                 ${tables.tableRemind}.update_time AS remind_update_time,
+                 
+                 ${tables.tableRemindCategory}.id AS remind_category_id,
+                 ${tables.tableRemindCategory}.name AS category_name,
+                 ${tables.tableRemindCategory}.desc AS category_desc,
+                 ${tables.tableRemindCategory}.icon AS category_icon,
+                 ${tables.tableRemindCategory}.create_time AS category_create_time,
+                 ${tables.tableRemindCategory}.update_time AS category_update_time,
+                 ${tables.tableRemindCategory}.is_deleted AS category_is_deleted,
+                  ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
+                  ${tables.tableTire}.id AS tire,
+                  ${tables.tableRemind}.cycle AS cycle`,
+
             `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0`,
             [userID],
-            this.commonJoins,
+            [
+                {
+                    table: tables.tableRemindVehicle,
+                    on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableTire,
+                    on: `${tables.tableTire}.seri = ${tables.tableRemindVehicle}.tire_seri`,
+                    type: 'LEFT',
+                },
+            ],
             `ORDER BY ${tables.tableRemind}.id IS NULL, ${tables.tableRemind}.expiration_time ASC`,
         );
 
@@ -100,52 +171,205 @@ class RemindModel extends DatabaseModel {
     }
 
     async getByVehicleId(con: PoolConnection, vehicleID: string) {
+        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        // if (isRedisReady) {
+        //     const { data } = await redisModel.hGetAll(
+        //         'remind',
+        //         'remind.model.ts',
+        //         Date.now(),
+        //     );
+        //     const reminds: any = Object.values(data)
+        //         .filter((remind: any) => {
+        //             remind = JSON.parse(remind);
+        //             return (
+        //                 remind.vehicles.includes(vehicleID) &&
+        //                 remind.is_deleted === 0
+        //             );
+        //         })
+        //         .map((item: any) => JSON.parse(item));
+        //     return reminds;
+        // }
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
-            `${this.vehicleColumns}, ${this.remindColumns}, ${this.remindCategoryColumns}, ${this.tireColumns}`,
+            `${tables.tableVehicleNoGPS}.id AS vehicle_id,
+                   ${tables.tableVehicleNoGPS}.license_plate AS license_plate,
+                   ${tables.tableVehicleNoGPS}.user_id AS user_id,
+                   ${tables.tableVehicleNoGPS}.license AS license,
+                   ${tables.tableVehicleNoGPS}.create_time AS vehicle_create_time,
+                   ${tables.tableVehicleNoGPS}.update_time AS vehicle_update_time,
+                   ${tables.tableVehicleNoGPS}.user_name AS user_name,
+                   ${tables.tableVehicleNoGPS}.user_address AS user_address,
+  
+                   ${tables.tableRemind}.id AS remind_id,
+                   ${tables.tableRemind}.img_url AS remind_img_url,
+                   ${tables.tableRemind}.note_repair AS note_repair,
+                   ${tables.tableRemind}.history_repair AS history_repair,
+                   ${tables.tableRemind}.current_kilometers AS current_kilometers,
+                   ${tables.tableRemind}.cumulative_kilometers AS cumulative_kilometers,
+                   ${tables.tableRemind}.expiration_time AS expiration_time,
+                   ${tables.tableRemind}.is_notified AS is_notified,
+                   ${tables.tableRemind}.is_received AS is_received,
+                   ${tables.tableRemind}.create_time AS remind_create_time,
+                   ${tables.tableRemind}.update_time AS remind_update_time,
+                   
+                   ${tables.tableRemindCategory}.id AS category_id,
+                   ${tables.tableRemindCategory}.name AS category_name,
+                   ${tables.tableRemindCategory}.desc AS category_desc,
+                   ${tables.tableRemindCategory}.icon AS category_icon,
+                   ${tables.tableRemindCategory}.create_time AS category_create_time,
+                   ${tables.tableRemindCategory}.update_time AS category_update_time,
+                   ${tables.tableRemindCategory}.is_deleted AS category_is_deleted
+                   ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
+                   ${tables.tableTire}.id AS tire,
+                   ${tables.tableRemind}.cycle AS cycle
+                   `,
+
             `${tables.tableVehicleNoGPS}.license_plate = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0`,
             [vehicleID],
-            this.commonJoins,
+            [
+                {
+                    table: tables.tableRemindVehicle,
+                    on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableTire,
+                    on: `${tables.tableTire}.seri = ${tables.tableRemindVehicle}.tire_seri`,
+                    type: 'LEFT',
+                },
+            ],
             `ORDER BY ${tables.tableRemind}.expiration_time ASC`,
         );
-
         return result;
     }
 
     async search(con: PoolConnection, userID: number, query: any) {
-        const params: any[] = [userID];
-        let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND is_received = 0`;
+        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        // if (isRedisReady) {
+        //     const { data } = await redisModel.hGetAll(
+        //         'remind',
+        //         'remind.model.ts',
+        //         Date.now(),
+        //     );
+        //     const reminds: any = Object.values(data).filter((remind: any) => {
+        //         remind = JSON.parse(remind);
+        //         // filter by user_id, vehicle_id, keyword, is_deleted, is_received, note_repair, cumulative_kilometers
+        //         return (
+        //             remind.user_id === userID &&
+        //             remind.is_deleted === 0 &&
+        //             remind.is_received === 0 &&
+        //             remind.vehicles.includes(query.vehicle_id) &&
+        //             (remind.note_repair
+        //                 .toLowerCase()
+        //                 .includes(query.keyword.toLowerCase()) ||
+        //                 remind.cumulative_kilometers
+        //                     .toLowerCase()
+        //                     .includes(query.keyword.toLowerCase()) ||
+        //                 remind.category_name
+        //                     .toLowerCase()
+        //                     .includes(query.keyword.toLowerCase()) ||
+        //                 remind.license_plate
+        //                     .toLowerCase()
+        //                     .includes(query.keyword.toLowerCase()) ||
+        //                 remind.license
+        //                     .toLowerCase()
+        //                     .includes(query.keyword.toLowerCase()))
+        //         );
+        //     });
+        //     return reminds;
+        // }
 
-        if (query.vehicle_id) {
-            whereClause += ` AND ${tables.tableVehicleNoGPS}.license_plate = ?`;
-            params.push(query.vehicle_id);
-        }
-
-        if (query.keyword) {
-            whereClause += ` AND (
-                ${tables.tableVehicleNoGPS}.license_plate LIKE ? OR 
-                ${tables.tableVehicleNoGPS}.license LIKE ? OR
-                note_repair LIKE ? OR 
-                cumulative_kilometers LIKE ? OR
-                ${tables.tableRemindCategory}.name LIKE ?
-            )`;
-            const keyword = `%${query.keyword}%`;
-            params.push(keyword, keyword, keyword, keyword, keyword);
-        }
-
+        let params: any[] = [userID];
+        if (query.keyword === null) query.keyword = '';
+        let whereClause = `${tables.tableVehicleNoGPS}.user_id = ? ${
+            query.vehicle_id
+                ? `AND ${tables.tableVehicleNoGPS}.license_plate = '${query.vehicle_id}'`
+                : ''
+        } AND ${
+            tables.tableVehicleNoGPS
+        }.is_deleted = 0 AND is_received = 0 AND 
+              (         note_repair LIKE '%${query.keyword}%' OR
+                  cumulative_kilometers LIKE '%${query.keyword}%' OR
+                  ${tables.tableRemindCategory}.name LIKE '%${
+            query.keyword
+        }%' OR
+                  ${tables.tableVehicleNoGPS}.license_plate LIKE '%${
+            query.keyword
+        }%' OR 
+                  ${tables.tableVehicleNoGPS}.license LIKE '%${query.keyword}%'
+              )`;
         if (query.remind_category_id) {
-            whereClause += ` AND ${tables.tableRemind}.remind_category_id = ?`;
-            params.push(query.remind_category_id);
+            whereClause += ` AND ${tables.tableRemind}.remind_category_id = ${query.remind_category_id}`;
         }
 
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
-            `${this.vehicleColumns}, ${this.remindColumns}, ${this.remindCategoryColumns}, ${this.tireColumns}`,
+            `${tables.tableVehicleNoGPS}.license_plate AS license_plate,
+                 ${tables.tableVehicleNoGPS}.user_id AS user_id,
+                 ${tables.tableVehicleNoGPS}.license AS license,
+                 ${tables.tableVehicleNoGPS}.create_time AS vehicle_create_time,
+                 ${tables.tableVehicleNoGPS}.update_time AS vehicle_update_time,
+                 
+                 ${tables.tableRemind}.id AS remind_id,
+                 ${tables.tableRemind}.img_url AS remind_img_url,
+                 ${tables.tableRemind}.note_repair AS note_repair,
+                 ${tables.tableRemind}.history_repair AS history_repair,
+                 ${tables.tableRemind}.current_kilometers AS current_kilometers,
+                 ${tables.tableRemind}.cumulative_kilometers AS cumulative_kilometers,
+                 ${tables.tableRemind}.expiration_time AS expiration_time,
+                 ${tables.tableRemind}.is_notified AS is_notified,
+                 ${tables.tableRemind}.is_received AS is_received,
+                 ${tables.tableRemind}.create_time AS remind_create_time,
+                 ${tables.tableRemind}.update_time AS remind_update_time,
+                 
+                 ${tables.tableRemindCategory}.id AS remind_category_id,
+                 ${tables.tableRemindCategory}.name AS category_name,
+                 ${tables.tableRemindCategory}.desc AS category_desc,
+                 ${tables.tableRemindCategory}.icon AS category_icon,
+                 ${tables.tableRemindCategory}.create_time AS category_create_time,
+                 ${tables.tableRemindCategory}.update_time AS category_update_time,
+                 ${tables.tableRemindCategory}.is_deleted AS category_is_deleted,
+                 ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
+                 ${tables.tableTire}.id AS tire,
+                 ${tables.tableRemind}.cycle AS cycle
+                 `,
+
             whereClause,
             params,
-            this.commonJoins,
+            [
+                {
+                    table: tables.tableRemindVehicle,
+                    on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
+                    type: 'INNER',
+                },
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
+                    type: 'INNER',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
+                    type: 'INNER',
+                },
+                {
+                    table: tables.tableTire,
+                    on: `${tables.tableTire}.seri = ${tables.tableRemindVehicle}.tire_seri`,
+                    type: 'LEFT',
+                },
+            ],
             `ORDER BY ${tables.tableRemind}.id IS NULL, ${tables.tableRemind}.expiration_time ASC`,
         );
 
@@ -267,7 +491,7 @@ class RemindModel extends DatabaseModel {
     }
 
     async updateRedis(remind_id: number, remind: any) {
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
         if (isRedisReady) {
             await redisModel.hSet(
@@ -297,11 +521,11 @@ class RemindModel extends DatabaseModel {
                 time: schedule.time,
             },
             async () => {
-                await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
-                    name_remind: remind.note_repair + ' NDK',
-                    vehicle_name: vehicles.join(', '),
-                    user_id: remind.user_id,
-                });
+                // await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
+                //     name_remind: remind.note_repair + ' ',
+                //     vehicle_name: vehicles.join(', '),
+                //     user_id: remind.user_id,
+                // });
             },
             remind,
         );
@@ -316,7 +540,7 @@ class RemindModel extends DatabaseModel {
             remindID,
         );
 
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
         scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
 
@@ -359,7 +583,7 @@ class RemindModel extends DatabaseModel {
             remindID,
         );
 
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
         const results: any = await this.select(
             con,
@@ -442,7 +666,7 @@ class RemindModel extends DatabaseModel {
     }
 
     async updateRemind(con: PoolConnection, data: any, remindID: number) {
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
         const result: any = await this.select(
             con,
             tables.tableRemind,
@@ -490,6 +714,44 @@ class RemindModel extends DatabaseModel {
             remindID,
         );
 
+        const vehicles = await scheduleUtils.getVehiclesByRemindId(remindID);
+
+        // nếu cập nhập nhắc có hơn 1 xe
+        if (vehicles.length >= 2) {
+            const vehicleId = data?.vehicles[0];
+
+            // thêm 1 xe mới
+            const newRemind = await this.addRemind(con, payload);
+
+            console.log('newRemind', newRemind);
+
+            // update tbl_remind_vehicle
+            const result: any = await this.select(
+                con,
+                tables.tableRemindVehicle,
+                '*',
+                'remind_id = ? AND vehicle_id = ?',
+                [remindID, vehicleId],
+            );
+
+            console.log('result.id', result.id);
+
+            const remindVehicle = await this.update(
+                con,
+                tables.tableRemindVehicle,
+                { remind_id: newRemind },
+                'id',
+                result.id,
+            );
+
+            console.log('remindVehicle', remindVehicle);
+
+            // xóa phần tử theo data?.vehicles[0]
+            vehicles.splice(vehicleId, 1);
+
+            return { message: 'Update success' };
+        }
+
         if (data?.schedules && payload.is_notified === 0) {
             await this.delete(
                 con,
@@ -498,12 +760,6 @@ class RemindModel extends DatabaseModel {
             );
 
             await this.insertRemindSchedule(con, remindID, data);
-
-            const vehicles = await scheduleUtils.getVehiclesByRemindId(
-                remindID,
-            );
-
-            // console.log('vehicles', vehicles);
 
             scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
             for (const schedule of data?.schedules) {
@@ -537,7 +793,7 @@ class RemindModel extends DatabaseModel {
             'id',
             remindID,
         );
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
         const { data } = await redisModel.hGetAll(
             'remind',
@@ -634,7 +890,7 @@ class RemindModel extends DatabaseModel {
         vehicle_id: string,
         user_id: number,
     ) {
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
         if (isRedisReady) {
             const { data } = await redisModel.hGetAll(
                 'remind',

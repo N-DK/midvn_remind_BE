@@ -50,8 +50,8 @@ class VehicleNoGPS extends DatabaseModel {
             license = VALUES(license), 
             user_name = VALUES(user_name), 
             user_address = VALUES(user_address), 
-            update_time = ${Date.now()}
-            is_delete = 0`;
+            update_time = ${Date.now()},
+            is_deleted = 0`;
 
         return new Promise((resolve, reject) => {
             con.query(queryText, (err: any, result: any) => {

@@ -63,7 +63,7 @@ class ScheduleUtils {
         const month = expirationTime.getMonth() + 1;
         const day = expirationTime.getDate();
         const { remind_id, id, ...other } = remind;
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
         // console.log('other', other);
         // console.log('schedule', remind.schedules);
@@ -88,12 +88,12 @@ class ScheduleUtils {
                             end: s.end + remind.cycle * this.UNIT_MONTH * 1000,
                         })),
                     });
-                    await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
-                        name_remind:
-                            'Hạn bảo dưỡng ' + remind.note_repair + ' NDK',
-                        vehicle_name: 'Xe ' + remind.vehicles.join(', '),
-                        user_id: remind.user_id,
-                    });
+                    // await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
+                    //     name_remind:
+                    //         'Hạn bảo dưỡng ' + remind.note_repair + ' ',
+                    //     vehicle_name: 'Xe ' + remind.vehicles.join(', '),
+                    //     user_id: remind.user_id,
+                    // });
                 } catch (error) {
                     console.error(
                         'Error sending reminder notification:',
@@ -137,15 +137,15 @@ class ScheduleUtils {
                     },
                     remind,
                     async () => {
-                        await remindFeature.sendNotifyRemind(
-                            SV_NOTIFY as string,
-                            {
-                                name_remind:
-                                    'Gia hạn bảo dưỡng ' + remind.note_repair,
-                                vehicle_name: remind.vehicles.join(', '),
-                                user_id: remind.user_id,
-                            },
-                        );
+                        // await remindFeature.sendNotifyRemind(
+                        //     SV_NOTIFY as string,
+                        //     {
+                        //         name_remind:
+                        //             'Gia hạn bảo dưỡng ' + remind.note_repair,
+                        //         vehicle_name: remind.vehicles.join(', '),
+                        //         user_id: remind.user_id,
+                        //     },
+                        // );
                     },
                 );
 
@@ -155,7 +155,7 @@ class ScheduleUtils {
     }
 
     private async getRemindFromRedis() {
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
         if (isRedisReady) {
             const results = await redisModel.hGetAll(
@@ -171,7 +171,7 @@ class ScheduleUtils {
     }
 
     private async getRemindFromRedisById(remind_id: any) {
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
         if (isRedisReady) {
             const results = await redisModel.hGet(
@@ -189,7 +189,7 @@ class ScheduleUtils {
 
     private async loadReminds() {
         try {
-            const isRedisReady = redisModel.redis.instanceConnect.isReady;
+            const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
             if (!isRedisReady) {
                 const results = await this.getReminds();
                 return results?.filter(
@@ -260,7 +260,7 @@ class ScheduleUtils {
 
     private async loadSchedules() {
         try {
-            const isRedisReady = redisModel.redis.instanceConnect.isReady;
+            const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
             if (!isRedisReady) {
                 reminds = (await this.getReminds()) ?? [];
@@ -323,8 +323,8 @@ class ScheduleUtils {
                     conn,
                     tables.tableRemindSchedule,
                     '*',
-                    `remind_id = ${remindId}`,
-                    [],
+                    `remind_id = ?`,
+                    [remindId],
                     [
                         {
                             table: tables.tableRemind,
@@ -337,9 +337,8 @@ class ScheduleUtils {
                 const groupedData = result
                     .filter(
                         (item: any) =>
-                            item.is_notified === 0 &&
-                            item.is_deleted === 0 &&
-                            item.is_received === 0,
+                            // item.is_notified === 0 &&
+                            item.is_deleted === 0 && item.is_received === 0,
                     )
                     .reduce((acc: any, item: any) => {
                         if (!acc[item.remind_id]) {
@@ -428,7 +427,7 @@ class ScheduleUtils {
     }
 
     private async updateSchedulesInRedis(remind_id: any) {
-        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
         if (isRedisReady) {
             try {
                 await redisModel.hSet(

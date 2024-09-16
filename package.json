@@ -9,7 +9,7 @@
         "dev": "tsc -w & nodemon ./server.ts",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "author": "NDK",
+    "author": "",
     "license": "ISC",
     "dependencies": {
         "app-root-path": "^3.1.0",

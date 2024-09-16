@@ -216,7 +216,7 @@ class RemindService {
             } catch (error) {
                 throw error;
             } finally {
-                conn;
+                conn.release();
             }
         } catch (error) {
             throw error;

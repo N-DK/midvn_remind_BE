@@ -8,7 +8,7 @@ const { SV_NOTIFY } = configureEnvironment();
 // const LIMIT = 5000;
 // let count: number = 0;
 const remindFeature = async (client: any, data: any, requestId: any) => {
-    const isRedisReady = redisModel.redis.instanceConnect.isReady;
+    const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
     // if (count > LIMIT) count = 0;
     // count++;
     // const isResync = count > LIMIT;
@@ -35,7 +35,7 @@ const remindFeature = async (client: any, data: any, requestId: any) => {
             await processRemind(data, reminds);
         }
     } catch (error) {
-        console.error('Error', error);
+        // console.error('Error', error);
         mylogger.error('message', ['nameFeature', requestId, error]);
     }
 };
