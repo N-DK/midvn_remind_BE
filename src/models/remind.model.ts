@@ -390,7 +390,7 @@ class RemindModel extends DatabaseModel {
         if (data?.token) {
             const currentKilometers =
                 await this.getCurrentKilometersByVehicleId(
-                    data?.vehicles[0],
+                    data?.vehicles?.[0],
                     data?.token,
                 );
             data.current_kilometers = currentKilometers;
@@ -667,6 +667,16 @@ class RemindModel extends DatabaseModel {
 
     async updateRemind(con: PoolConnection, data: any, remindID: number) {
         const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
+
+        if (data?.token) {
+            const currentKilometers =
+                await this.getCurrentKilometersByVehicleId(
+                    data?.vehicles?.[0],
+                    data?.token,
+                );
+            data.current_kilometers = currentKilometers;
+        }
+
         const result: any = await this.select(
             con,
             tables.tableRemind,
@@ -674,6 +684,7 @@ class RemindModel extends DatabaseModel {
             'id = ?',
             [remindID],
         );
+
         const remindOld = result[0];
 
         const payload = {
@@ -706,14 +717,6 @@ class RemindModel extends DatabaseModel {
             vehicles: data?.vehicles ?? [],
         };
 
-        const results: any = await this.update(
-            con,
-            tables.tableRemind,
-            payload,
-            'id',
-            remindID,
-        );
-
         const vehicles = await scheduleUtils.getVehiclesByRemindId(remindID);
 
         // nếu cập nhập nhắc có hơn 1 xe
@@ -721,9 +724,21 @@ class RemindModel extends DatabaseModel {
             const vehicleId = data?.vehicles[0];
 
             // thêm 1 xe mới
-            const newRemind = await this.addRemind(con, payload);
+            const remind_id: any = await this.insert(
+                con,
+                tables.tableRemind,
+                payload,
+            );
 
-            console.log('newRemind', newRemind);
+            // thêm 1 lịch trình
+            if (payload.is_notified === 0 && data?.schedules) {
+                for (const schedule of data?.schedules) {
+                    await this.handleSchedule(schedule, remind, data?.vehicles);
+                }
+            }
+
+            // thêm 1 lịch trình
+            await this.insertRemindSchedule(con, remind_id, data);
 
             // update tbl_remind_vehicle
             const result: any = await this.select(
@@ -734,14 +749,14 @@ class RemindModel extends DatabaseModel {
                 [remindID, vehicleId],
             );
 
-            console.log('result.id', result.id);
+            console.log('result', result[0].id);
 
             const remindVehicle = await this.update(
                 con,
                 tables.tableRemindVehicle,
-                { remind_id: newRemind },
+                { remind_id: remind_id },
                 'id',
-                result.id,
+                result[0].id,
             );
 
             console.log('remindVehicle', remindVehicle);
@@ -751,6 +766,14 @@ class RemindModel extends DatabaseModel {
 
             return { message: 'Update success' };
         }
+
+        const results: any = await this.update(
+            con,
+            tables.tableRemind,
+            payload,
+            'id',
+            remindID,
+        );
 
         if (data?.schedules && payload.is_notified === 0) {
             await this.delete(
