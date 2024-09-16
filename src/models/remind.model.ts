@@ -225,7 +225,7 @@ class RemindModel extends DatabaseModel {
                    ${tables.tableRemind}.cycle AS cycle
                    `,
 
-            `${tables.tableVehicleNoGPS}.license_plate = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0`,
+            `${tables.tableVehicleNoGPS}.license_plate = ? AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND ${tables.tableRemind}.is_deleted = 0`,
             [vehicleID],
             [
                 {
@@ -1003,24 +1003,24 @@ class RemindModel extends DatabaseModel {
     async getScheduleByRemindId(remindId: any) {
         return await scheduleUtils.buildSchedule(remindId);
     }
-    async deleteMultiRemind(con: PoolConnection, data:any) {
+    async deleteMultiRemind(con: PoolConnection, data: any) {
         const reminds = await reminder.getReminds(true);
-        
-        Object.keys(reminds).forEach(key => {
-            reminds[key] = reminds[key].map((remind: any) => remind.id);
-        })
 
-        for(const vechile of data?.vehicles) {
+        Object.keys(reminds).forEach((key) => {
+            reminds[key] = reminds[key].map((remind: any) => remind.id);
+        });
+
+        for (const vechile of data?.vehicles) {
             const result = await this.update(
                 con,
                 tables.tableRemind,
                 { is_deleted: 1, is_notified: 1 },
                 'id',
                 reminds[vechile],
-            )
+            );
         }
 
-        return {successfully: true};
+        return { successfully: true };
     }
 }
 
