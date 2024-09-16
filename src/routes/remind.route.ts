@@ -73,6 +73,7 @@ router.put(
 
 router.post(
     '/finish-remind/:id',
+    reminder.upload.array('images', 10),
     [param('id', constants.VALIDATE_DATA).isNumeric()],
     verifyToken,
     remindController.finishRemind,
