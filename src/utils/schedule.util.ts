@@ -88,12 +88,12 @@ class ScheduleUtils {
                             end: s.end + remind.cycle * this.UNIT_MONTH * 1000,
                         })),
                     });
-                    // await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
-                    //     name_remind:
-                    //         'Hạn bảo dưỡng ' + remind.note_repair + ' ',
-                    //     vehicle_name: 'Xe ' + remind.vehicles.join(', '),
-                    //     user_id: remind.user_id,
-                    // });
+                    await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
+                        name_remind:
+                            'Hạn bảo dưỡng ' + remind?.note_repair + ' ',
+                        vehicle_name: 'Xe ' + remind?.vehicles?.join(', '),
+                        user_id: remind?.user_id,
+                    });
                 } catch (error) {
                     console.error(
                         'Error sending reminder notification:',
@@ -137,15 +137,15 @@ class ScheduleUtils {
                     },
                     remind,
                     async () => {
-                        // await remindFeature.sendNotifyRemind(
-                        //     SV_NOTIFY as string,
-                        //     {
-                        //         name_remind:
-                        //             'Gia hạn bảo dưỡng ' + remind.note_repair,
-                        //         vehicle_name: remind.vehicles.join(', '),
-                        //         user_id: remind.user_id,
-                        //     },
-                        // );
+                        await remindFeature.sendNotifyRemind(
+                            SV_NOTIFY as string,
+                            {
+                                name_remind:
+                                    'Gia hạn bảo dưỡng ' + remind?.note_repair,
+                                vehicle_name: remind?.vehicles?.join(', '),
+                                user_id: remind?.user_id,
+                            },
+                        );
                     },
                 );
 

@@ -520,11 +520,11 @@ class RemindModel extends DatabaseModel {
                 time: schedule.time,
             },
             async () => {
-                // await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
-                //     name_remind: remind.note_repair + ' ',
-                //     vehicle_name: vehicles.join(', '),
-                //     user_id: remind.user_id,
-                // });
+                await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
+                    name_remind: remind.note_repair + ' ',
+                    vehicle_name: vehicles?.join(', '),
+                    user_id: remind?.user_id,
+                });
             },
             remind,
         );
@@ -1010,13 +1010,15 @@ class RemindModel extends DatabaseModel {
         });
 
         for (const vechile of data?.vehicles) {
-            const result = await this.update(
-                con,
-                tables.tableRemind,
-                { is_deleted: 1, is_notified: 1 },
-                'id',
-                reminds[vechile],
-            );
+            if (reminds?.[vechile]) {
+                const result = await this.update(
+                    con,
+                    tables.tableRemind,
+                    { is_deleted: 1, is_notified: 1 },
+                    'id',
+                    reminds[vechile],
+                );
+            }
         }
 
         return { successfully: true };
