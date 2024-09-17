@@ -23,11 +23,15 @@ class TokenFirebaseService {
             throw error;
         }
     }
-    async deleteToken(data: any) {
+    async deleteToken(data: any, userID: number) {
         try {
             const { conn } = await getConnection();
             try {
-                const result = await TokenFirebase.deleteToken(conn, data);
+                const result = await TokenFirebase.deleteToken(
+                    conn,
+                    data,
+                    userID,
+                );
                 return result;
             } catch (error) {
                 throw error;

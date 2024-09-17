@@ -14,21 +14,21 @@ class TokenFirebase extends DatabaseModel {
         userID: number,
         parentID: number,
     ) {
-        const tokenIsExist: any = await this.select(
-            conn,
-            tables.tableTokenFirebase,
-            '*',
-            'token = ?',
-            [data.token],
-        );
+        // const tokenIsExist: any = await this.select(
+        //     conn,
+        //     tables.tableTokenFirebase,
+        //     '*',
+        //     'token = ?',
+        //     [data.token],
+        // );
         // console.log(tokenIsExist);
-        if (tokenIsExist && tokenIsExist.length > 0) {
-            throw new BusinessLogicError(
-                'Token đã tồn tại',
-                ['Thêm token mới thất bại' as never],
-                StatusCodes.CONFLICT,
-            );
-        }
+        // if (tokenIsExist && tokenIsExist.length > 0) {
+        //     throw new BusinessLogicError(
+        //         'Token đã tồn tại',
+        //         ['Thêm token mới thất bại' as never],
+        //         StatusCodes.CONFLICT,
+        //     );
+        // }
         const result = await this.insert(conn, tables.tableTokenFirebase, {
             user_id: userID,
             token: data.token,
@@ -41,13 +41,14 @@ class TokenFirebase extends DatabaseModel {
         return result;
     }
 
-    async deleteToken(conn: PoolConnection, data: any) {
+    async deleteToken(conn: PoolConnection, data: any, userID: number) {
         const result = await this.delete(
             conn,
             tables.tableTokenFirebase,
-            'token = ?',
+            `token = ? AND user_id = ${userID}`,
             data.token,
         );
+        return result;
     }
 }
 export default new TokenFirebase();
