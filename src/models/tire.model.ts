@@ -21,15 +21,36 @@ class TireModel extends DatabaseModel {
 
     async addTire(conn: PoolConnection, data: any) {
         const { seri, size, brand, license_plate } = data;
-        const result = await this.insert(conn, tables.tableTire, {
-            seri,
-            size,
-            brand,
-            license_plate,
-            create_time: Date.now(),
-        });
+        const queryText = `UPDATE ${tables.tableTire} 
+            SET is_deleted = 0, update_time = ${Date.now()} 
+            WHERE seri = '${seri}' AND license_plate = '${license_plate}' AND is_deleted = 1`;
 
-        return result;
+        try {
+            const updateResult: any = await new Promise((resolve, reject) => {
+                conn.query(queryText, (err: any, result: any) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(result);
+                    }
+                });
+            });
+
+            if (updateResult && updateResult.affectedRows > 0) {
+                return updateResult;
+            }
+
+            const insertResult = await this.insert(conn, tables.tableTire, {
+                seri,
+                size,
+                brand,
+                license_plate,
+                create_time: Date.now(),
+            });
+            return insertResult;
+        } catch (error: any) {
+            throw new Error(`Error in addTire: ${error.message}`);
+        }
     }
 
     async updateTire(conn: PoolConnection, data: any) {
