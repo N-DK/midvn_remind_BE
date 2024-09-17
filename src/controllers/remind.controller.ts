@@ -25,7 +25,7 @@ class RemindController {
             if (Array.isArray(req.files) && req.files.length > 0) {
                 req.body.img_url = req.files
                     .map((file) =>
-                        file.path.replace(`src\\`, '').replace('build\\', ''),
+                        file.path.replace(`src/`, '').replace('build/', ''),
                     )
                     .join(', ');
             }
@@ -68,7 +68,7 @@ class RemindController {
             if (Array.isArray(req.files) && req.files.length > 0) {
                 req.body.img_url = req.files
                     .map((file) =>
-                        file.path.replace(`src\\`, '').replace('build\\', ''),
+                        file.path.replace(`src/`, '').replace('build/', ''),
                     )
                     .join(', ');
             }
@@ -113,7 +113,7 @@ class RemindController {
             if (Array.isArray(req.files) && req.files.length > 0) {
                 req.body.img_url = req.files
                     .map((file) =>
-                        file.path.replace(`src\\`, '').replace('build\\', ''),
+                        file.path.replace(`src/`, '').replace('build/', ''),
                     )
                     .join(', ');
             }
