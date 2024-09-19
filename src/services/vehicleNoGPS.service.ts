@@ -51,11 +51,7 @@ class VehicleNoGPSService {
                         return data;
                     })
                     .catch((error) => {
-                        throw new BusinessLogicError(
-                            'Trùng dữ liệu trong fields',
-                            [error.sqlMessage as never],
-                            StatusCodes.CONFLICT,
-                        );
+                        throw error;
                     });
 
                 return result;
