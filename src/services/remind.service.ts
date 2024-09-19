@@ -48,6 +48,24 @@ class RemindService {
             throw error;
         }
     }
+
+    async addRemindGPS(data: any) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const remind = await remindModel.addRemindGPS(conn, data);
+                return remind;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error: any) {
+            console.log(error);
+            throw error;
+        }
+    }
+
     async updateNotifiedOff(remindID: number) {
         try {
             const { conn } = await getConnection();

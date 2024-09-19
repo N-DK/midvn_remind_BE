@@ -22,6 +22,16 @@ class VehicleNoGPS extends DatabaseModel {
         return result;
     }
 
+    async getAllRecord(con: PoolConnection){
+        const result = await this.select(
+            con,
+            tables.tableVehicleNoGPS,
+            '*',
+            'ID IS NOT NULL',
+        );
+        return result;
+    }
+    
     async getVehicleNoGPSbyID(con: PoolConnection, vehicleId: number) {
         const result = await this.select(
             con,
@@ -34,6 +44,28 @@ class VehicleNoGPS extends DatabaseModel {
     }
 
     async addVehicleNoGPS(con: PoolConnection, data: any, userID: number) {
+        const recordMap = new Map<string, any>();
+        const allRecord:any = await this.getAllRecord(con);
+        allRecord.forEach((record: any) => {
+            recordMap.set(record.license_plate, record);
+        });
+
+        data.forEach((item: any) => {
+            const record = recordMap.get(item.license_plate);
+
+            if (
+                record &&
+                record.user_id !== userID &&
+                record.is_deleted === 0
+            ) {
+                throw new BusinessLogicError(
+                    'Duplicate vehicle record',
+                    ['Duplicate vehicle record' as never],
+                    StatusCodes.CONFLICT,
+                );
+            }
+        });
+
         let queryText = `INSERT INTO ${tables.tableVehicleNoGPS} 
             (license_plate, user_id, license, create_time, update_time, user_name, user_address) 
             VALUES `;
@@ -53,6 +85,7 @@ class VehicleNoGPS extends DatabaseModel {
             user_name = VALUES(user_name), 
             user_address = VALUES(user_address), 
             update_time = ${Date.now()},
+            user_id = ${userID},
             is_deleted = 0`;
 
         return new Promise((resolve, reject) => {

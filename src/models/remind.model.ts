@@ -385,16 +385,33 @@ class RemindModel extends DatabaseModel {
         return data[vehicleID]?.total_distance ?? 0;
     }
 
-    async addRemind(con: PoolConnection, data: any) {
-        if (data?.token) {
-            const currentKilometers =
-                await this.getCurrentKilometersByVehicleId(
-                    data?.vehicles?.[0],
-                    data?.token,
-                );
-            data.current_kilometers = currentKilometers;
+    async addRemindGPS(con: PoolConnection, data: any) {
+        const res = await GPSApi.getGPSData(data?.token);
+        const __data = res?.data;
+        for (const vehicleId of data?.vehicles) {
+            const current_kilometers = __data?.[vehicleId]?.total_distance ?? 0;
+            const vehicles = [vehicleId];
+            const payload = {
+                ...data,
+                current_kilometers,
+                vehicles,
+            };
+
+            this.addRemind(con, payload);
         }
 
+        return { message: 'success' };
+    }
+
+    async addRemind(con: PoolConnection, data: any) {
+        // if (data?.token) {
+        //     const currentKilometers =
+        //         await this.getCurrentKilometersByVehicleId(
+        //             data?.vehicles?.[0],
+        //             data?.token,
+        //         );
+        //     data.current_kilometers = currentKilometers;
+        // }
         try {
             const payload = {
                 img_url: data?.img_url ?? null,
