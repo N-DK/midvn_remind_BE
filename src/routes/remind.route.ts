@@ -40,6 +40,20 @@ router.post(
     remindController.addRemind,
 );
 
+
+router.post(
+    '/add-remind-gps',
+    reminder.upload.array('images', 10),
+    [
+        body('remind_category_id', constants.VALIDATE_DATA).isNumeric(),
+        body('is_notified', constants.VALIDATE_DATA).isNumeric(),
+        body('note_repair', constants.NOT_EMPTY).isString(),
+        body('expiration_time', constants.VALIDATE_DATA).isNumeric(),
+    ],
+    verifyToken,
+    remindController.addRemindGPS,
+);
+
 router.get('/get-category-all', verifyToken, remindController.getCategoryAll);
 
 router.patch(

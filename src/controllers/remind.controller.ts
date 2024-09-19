@@ -44,6 +44,30 @@ class RemindController {
         },
     );
 
+    addRemindGPS = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            if (Array.isArray(req.files) && req.files.length > 0) {
+                req.body.img_url = req.files
+                    .map((file) =>
+                        file.path.replace(`src/`, '').replace('build/', ''),
+                    )
+                    .join(', ');
+            }
+
+            if (typeof req.body.vehicles === 'string') {
+                req.body.vehicles = JSON.parse(req.body.vehicles);
+            }
+            if (typeof req.body.schedules === 'string') {
+                req.body.schedules = JSON.parse(req.body.schedules);
+            }
+
+            const data = req.body;
+
+            const remind = await remindService.addRemindGPS(data);
+            CREATED(res, remind);
+        },
+    );
+
     updateNotifiedOff = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             const result = await remindService.updateNotifiedOff(
