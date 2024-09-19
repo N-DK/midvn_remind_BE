@@ -25,6 +25,9 @@ app.use(
         },
     }),
 );
+
+app.use(helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }));
+
 app.use(cors({ origin: true, credentials: true })); // origin: true cho phép client truy cập.
 // config uploads folder
 app.use('/uploads', express.static(path.join('./build/src/uploads')));

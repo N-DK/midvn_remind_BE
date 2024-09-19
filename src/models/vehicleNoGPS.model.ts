@@ -3,6 +3,8 @@ import { tables } from '../constants/tableName.constant';
 import DatabaseModel from './database.model';
 import { BusinessLogicError } from '../core/error.response';
 import { StatusCodes } from '../core/httpStatusCode';
+import reminder from '../utils/reminder.util';
+import remindService from '../services/remind.service';
 
 class VehicleNoGPS extends DatabaseModel {
     constructor() {
@@ -90,6 +92,11 @@ class VehicleNoGPS extends DatabaseModel {
         vehicleID: number,
     ) {
         const check: any = await this.getVehicleNoGPSbyID(con, vehicleID);
+
+        await remindService.deleteMultiRemind({
+            vehicles: [check[0]?.license_plate],
+        });
+
         if (check[0].user_id !== user_id) {
             throw new BusinessLogicError(
                 'Đã xảy ra lỗi',

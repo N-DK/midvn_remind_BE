@@ -413,6 +413,11 @@ class ScheduleUtils {
             },
             { name: `${remind.id}-${schedule.time}-schedule` },
         );
+
+        // console.table({
+        //     name: `${schedule.time}-schedule-${schedule.start}-${schedule.end}`,
+        // });
+
         cronJobs.set(`${remind.id}-${schedule.time}-schedule`, cronJob);
         return cronJob;
     }

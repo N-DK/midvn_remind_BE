@@ -155,7 +155,9 @@ class RemindController {
     getCategoryAll = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             const data = await remindService.getCategoryAll(
-                req.body.user.userId,
+                req.body?.user?.level === 10
+                    ? req.body?.user?.userId
+                    : req.body?.user?.parentId,
             );
             GET(res, data);
         },

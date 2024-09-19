@@ -296,9 +296,7 @@ class RemindModel extends DatabaseModel {
             query.vehicle_id
                 ? `AND ${tables.tableVehicleNoGPS}.license_plate = '${query.vehicle_id}'`
                 : ''
-        } AND ${
-            tables.tableVehicleNoGPS
-        }.is_deleted = 0 AND is_received = 0 AND 
+        } AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND 
               (         note_repair LIKE '%${query.keyword}%' OR
                   cumulative_kilometers LIKE '%${query.keyword}%' OR
                   ${tables.tableRemindCategory}.name LIKE '%${
@@ -342,6 +340,8 @@ class RemindModel extends DatabaseModel {
                  ${tables.tableRemindCategory}.is_deleted AS category_is_deleted,
                  ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
                  ${tables.tableTire}.id AS tire,
+                 ${tables.tableVehicleNoGPS}.user_name AS user_name,
+                 ${tables.tableVehicleNoGPS}.user_address AS user_address,
                  ${tables.tableRemind}.cycle AS cycle
                  `,
 
@@ -351,17 +351,17 @@ class RemindModel extends DatabaseModel {
                 {
                     table: tables.tableRemindVehicle,
                     on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-                    type: 'INNER',
+                    type: 'LEFT',
                 },
                 {
                     table: tables.tableRemind,
                     on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
-                    type: 'INNER',
+                    type: 'LEFT',
                 },
                 {
                     table: tables.tableRemindCategory,
                     on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
-                    type: 'INNER',
+                    type: 'LEFT',
                 },
                 {
                     table: tables.tableTire,
@@ -1017,6 +1017,14 @@ class RemindModel extends DatabaseModel {
                     { is_deleted: 1, is_notified: 1 },
                     'id',
                     reminds[vechile],
+                );
+                scheduleUtils.destroyAllCronJobByRemindId(
+                    reminds[vechile],
+                    'schedule',
+                );
+                scheduleUtils.destroyAllCronJobByRemindId(
+                    reminds[vechile],
+                    'expire',
                 );
             }
         }

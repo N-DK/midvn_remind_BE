@@ -19,7 +19,7 @@ if (!fs.existsSync(uploadDir)) {
 const storage = multer.diskStorage({
     destination: uploadDir,
     filename: function (req, file, cb) {
-        return cb(null, `${file.fieldname}-${Date.now()}${file.originalname}`);
+        return cb(null, `${file.originalname}`);
     },
 });
 let remindsVehicles: any;
@@ -231,7 +231,7 @@ const reminder = {
                 const results: any = await dataBaseModel.selectWithJoins(
                     conn,
                     tables.tableRemindVehicle,
-                    `vehicle_id, icon`,
+                    `vehicle_id, icon, remind_id`,
                     `${tables.tableRemind}.user_id = ? AND is_received = 0 AND ${tables.tableRemind}.is_deleted = 0`,
                     [userId],
                     [
@@ -254,9 +254,7 @@ const reminder = {
                     if (!groupByVehicleId[item.vehicle_id]) {
                         groupByVehicleId[item.vehicle_id] = [];
                     }
-                    groupByVehicleId[item.vehicle_id].push(
-                        ...Object.values(other),
-                    );
+                    groupByVehicleId[item.vehicle_id].push({ ...other });
                 });
 
                 return groupByVehicleId;
