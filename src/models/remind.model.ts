@@ -791,6 +791,8 @@ class RemindModel extends DatabaseModel {
             remindID,
         );
 
+        this.insertVehicles(con, remindID, data?.vehicles, data?.tire_seri);
+
         if (data?.schedules && Number(payload.is_notified) === 0) {
             const result = await this.delete(
                 con,
