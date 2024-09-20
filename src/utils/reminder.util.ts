@@ -7,6 +7,7 @@ import scheduleUtil from './schedule.util';
 import path from 'path';
 import fs from 'fs';
 import appRoot from 'app-root-path';
+import remindModel from '../models/remind.model';
 
 const dataBaseModel = new DatabaseModel();
 
@@ -231,7 +232,7 @@ const reminder = {
                 const results: any = await dataBaseModel.selectWithJoins(
                     conn,
                     tables.tableRemindVehicle,
-                    `vehicle_id, icon, remind_id`,
+                    `${remindModel.vehicleGPSColumns}, ${remindModel.remindColumns}, ${remindModel.remindCategoryColumns}, ${remindModel.tireColumns}`,
                     `${tables.tableRemind}.user_id = ? AND is_received = 0 AND ${tables.tableRemind}.is_deleted = 0`,
                     [userId],
                     [
@@ -250,11 +251,14 @@ const reminder = {
 
                 const groupByVehicleId: any = {};
                 results.forEach((item: any) => {
-                    const { vehicle_id, ...other } = item;
-                    if (!groupByVehicleId[item.vehicle_id]) {
-                        groupByVehicleId[item.vehicle_id] = [];
+                    const { license_plate, icon, ...other } = item;
+                    if (!groupByVehicleId[item.license_plate]) {
+                        groupByVehicleId[item.license_plate] = [];
                     }
-                    groupByVehicleId[item.vehicle_id].push({ ...other });
+                    groupByVehicleId[item.license_plate].push({
+                        icon,
+                        remind: { ...other },
+                    });
                 });
 
                 return groupByVehicleId;

@@ -17,18 +17,11 @@ class RemindModel extends DatabaseModel {
         super();
     }
 
-    private vehicleColumns = `
-        ${tables.tableVehicleNoGPS}.id AS vehicle_id,
-        ${tables.tableVehicleNoGPS}.license_plate AS license_plate,
-        ${tables.tableVehicleNoGPS}.user_id AS user_id,
-        ${tables.tableVehicleNoGPS}.license AS license,
-        ${tables.tableVehicleNoGPS}.create_time AS vehicle_create_time,
-        ${tables.tableVehicleNoGPS}.update_time AS vehicle_update_time,
-        ${tables.tableVehicleNoGPS}.user_name AS user_name,
-        ${tables.tableVehicleNoGPS}.user_address AS user_address
+    public vehicleGPSColumns = `
+        ${tables.tableRemindVehicle}.vehicle_id AS license_plate
     `;
 
-    private remindColumns = `
+    public remindColumns = `
         ${tables.tableRemind}.id AS remind_id,
         ${tables.tableRemind}.img_url AS remind_img_url,
         ${tables.tableRemind}.note_repair AS note_repair,
@@ -38,52 +31,18 @@ class RemindModel extends DatabaseModel {
         ${tables.tableRemind}.expiration_time AS expiration_time,
         ${tables.tableRemind}.is_notified AS is_notified,
         ${tables.tableRemind}.is_received AS is_received,
-        ${tables.tableRemind}.create_time AS remind_create_time,
-        ${tables.tableRemind}.update_time AS remind_update_time,
         ${tables.tableRemind}.cycle AS cycle
     `;
 
-    private remindCategoryColumns = `
+    public remindCategoryColumns = `
         ${tables.tableRemindCategory}.id AS remind_category_id,
         ${tables.tableRemindCategory}.name AS category_name,
-        ${tables.tableRemindCategory}.desc AS category_desc,
-        ${tables.tableRemindCategory}.icon AS category_icon,
-        ${tables.tableRemindCategory}.create_time AS category_create_time,
-        ${tables.tableRemindCategory}.update_time AS category_update_time,
-        ${tables.tableRemindCategory}.is_deleted AS category_is_deleted
+        ${tables.tableRemindCategory}.icon AS icon
     `;
 
-    private tireColumns = `
-        ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
-        ${tables.tableTire}.id AS tire
+    public tireColumns = `
+        ${tables.tableRemindVehicle}.tire_seri AS tire_seri
     `;
-
-    private commonJoins: {
-        table: string;
-        on: string;
-        type?: 'LEFT' | 'INNER' | 'RIGHT';
-    }[] = [
-        {
-            table: tables.tableRemindVehicle,
-            on: `${tables.tableVehicleNoGPS}.license_plate = ${tables.tableRemindVehicle}.vehicle_id`,
-            type: 'LEFT',
-        },
-        {
-            table: tables.tableRemind,
-            on: `${tables.tableRemindVehicle}.remind_id = ${tables.tableRemind}.id`,
-            type: 'LEFT',
-        },
-        {
-            table: tables.tableRemindCategory,
-            on: `${tables.tableRemind}.remind_category_id = ${tables.tableRemindCategory}.id`,
-            type: 'LEFT',
-        },
-        {
-            table: tables.tableTire,
-            on: `${tables.tableTire}.seri = ${tables.tableRemindVehicle}.tire_seri`,
-            type: 'LEFT',
-        },
-    ];
 
     async getAll(con: PoolConnection, userID: number) {
         // const isRedisReady = redisModel.redis.instanceConnect.isReady;
@@ -791,7 +750,13 @@ class RemindModel extends DatabaseModel {
             remindID,
         );
 
-        this.insertVehicles(con, remindID, data?.vehicles, data?.tire_seri);
+        await this.update(
+            con,
+            tables.tableRemindVehicle,
+            { tire_seri: data?.tire_seri },
+            'remind_id',
+            remindID,
+        );
 
         if (data?.schedules && Number(payload.is_notified) === 0) {
             const result = await this.delete(
@@ -1021,6 +986,7 @@ class RemindModel extends DatabaseModel {
     async getScheduleByRemindId(remindId: any) {
         return await scheduleUtils.buildSchedule(remindId);
     }
+
     async deleteMultiRemind(con: PoolConnection, data: any) {
         const reminds = await reminder.getReminds(true);
 
@@ -1049,6 +1015,30 @@ class RemindModel extends DatabaseModel {
         }
 
         return { successfully: true };
+    }
+
+    async getRemindById(conn: PoolConnection, remindId: any) {
+        const result: any = await this.selectWithJoins(
+            conn,
+            tables.tableRemindVehicle,
+            `${this.vehicleGPSColumns}, ${this.remindColumns}, ${this.remindCategoryColumns}, ${this.tireColumns}`,
+            `${tables.tableRemind}.id = ?`,
+            [remindId],
+            [
+                {
+                    table: tables.tableRemind,
+                    on: `${tables.tableRemind}.id = ${tables.tableRemindVehicle}.remind_id`,
+                    type: 'LEFT',
+                },
+                {
+                    table: tables.tableRemindCategory,
+                    on: `${tables.tableRemindCategory}.id = ${tables.tableRemind}.remind_category_id`,
+                    type: 'LEFT',
+                },
+            ],
+        );
+
+        return result[0];
     }
 }
 

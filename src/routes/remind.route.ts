@@ -18,6 +18,8 @@ router.get('/get-all', verifyToken, (req, res, next) => {
     }
 });
 
+router.get('/get-remind/:id', verifyToken, remindController.getRemindById);
+
 router.get('/gps/get-all', verifyToken, remindController.getAllGPS);
 
 router.get(
@@ -109,6 +111,10 @@ router.post(
     verifyToken,
     remindController.deleteMultiRemind,
 );
+
+// router.get('/get/unfinished', verifyToken, remindController.getUnfinished);
+
+// router.get('/get/finished', verifyToken, remindController.getFinished);
 
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);

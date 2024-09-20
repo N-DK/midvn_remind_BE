@@ -202,6 +202,15 @@ class RemindController {
             UPDATE(res, result);
         },
     );
+
+    getRemindById = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const data = await remindService.getRemindById(
+                parseInt(req.params.id),
+            );
+            GET(res, data);
+        },
+    );
 }
 
 export default new RemindController();

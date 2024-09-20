@@ -274,6 +274,22 @@ class RemindService {
             throw error;
         }
     }
+
+    async getRemindById(remindID: number) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindModel.getRemindById(conn, remindID);
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindService();
