@@ -112,9 +112,9 @@ router.post(
     remindController.deleteMultiRemind,
 );
 
-// router.get('/get/unfinished', verifyToken, remindController.getUnfinished);
+router.get('/get/unfinished', verifyToken, remindController.getUnfinished);
 
-// router.get('/get/finished', verifyToken, remindController.getFinished);
+router.get('/get/finished', verifyToken, remindController.getFinished);
 
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);

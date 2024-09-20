@@ -1040,6 +1040,26 @@ class RemindModel extends DatabaseModel {
 
         return result[0];
     }
+    async getUnfinished(con: PoolConnection, userID: number){
+        const result = await this.count(
+            con,
+            tables.tableRemind,
+            '*',
+            'is_received = 0 AND user_id =?',
+            [userID as never]
+        )
+        return result;
+    }
+    async getFinished(con: PoolConnection, userID: number){
+        const result = await this.count(
+            con,
+            tables.tableRemind,
+            '*',
+            'is_received = AND user_id =?',
+            [userID as never]
+        )
+        return result;
+    }
 }
 
 export default new RemindModel();

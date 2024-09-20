@@ -1,3 +1,4 @@
+import { tr } from 'date-fns/locale';
 import { BusinessLogicError } from '../core/error.response';
 import { getConnection } from '../dbs/init.mysql';
 import remindModel from '../models/remind.model';
@@ -280,6 +281,36 @@ class RemindService {
             const { conn } = await getConnection();
             try {
                 const result = await remindModel.getRemindById(conn, remindID);
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+    async getUnfinished(userID: number) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindModel.getUnfinished(conn, userID);
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+    async getFinished(userID: number) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindModel.getFinished(conn, userID);
                 return result;
             } catch (error) {
                 throw error;

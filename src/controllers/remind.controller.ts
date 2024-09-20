@@ -211,6 +211,23 @@ class RemindController {
             GET(res, data);
         },
     );
+    getUnfinished = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const data = await remindService.getUnfinished(
+                req.body.user.userId
+            );
+            GET(res, data);
+        },
+    )
+    getFinished = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const data = await remindService.getFinished(
+                req.body.user.userId
+            );
+            GET(res, data);
+        },
+    )
+
 }
 
 export default new RemindController();
