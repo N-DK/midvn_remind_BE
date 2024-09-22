@@ -1051,7 +1051,8 @@ class RemindModel extends DatabaseModel {
         const { startTime, endTime } = data;
         let whereClause = `user_id = ? AND is_received = ?`;
         let params: any[] = [userID, isReceived];
-        if (startTime && endTime) {
+
+        if (Number(startTime) && Number(endTime)) {
             whereClause += ` AND expiration_time >= ? AND expiration_time <= ?`;
             params.push(startTime, endTime);
         }
@@ -1059,7 +1060,8 @@ class RemindModel extends DatabaseModel {
             this.select(con, tables.tableRemind, '*', whereClause, params),
             this.count(con, tables.tableRemind, '*', whereClause, params),
         ]);
-        return { data: results, totalRecord: Number(count) };
+
+        return { data: results, totalRecord: (count as any)[0].total };
     }
 
     async getUnfinished(con: PoolConnection, userID: number, data: any) {

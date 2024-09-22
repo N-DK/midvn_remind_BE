@@ -218,7 +218,7 @@ class RemindController {
                 req.body.user.userId,
                 req.query,
             );
-            GET(res, data.data, data.totalRecord);
+            GET(res, data.data, 0, data.totalRecord);
         },
     );
 
@@ -228,7 +228,7 @@ class RemindController {
                 req.body.user.userId,
                 req.query,
             );
-            GET(res, data.data, data.totalRecord);
+            GET(res, data.data, 0, data.totalRecord);
         },
     );
 }
