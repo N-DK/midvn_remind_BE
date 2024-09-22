@@ -291,11 +291,15 @@ class RemindService {
             throw error;
         }
     }
-    async getUnfinished(userID: number) {
+    async getUnfinished(userID: number, query: any) {
         try {
             const { conn } = await getConnection();
             try {
-                const result = await remindModel.getUnfinished(conn, userID);
+                const result = await remindModel.getUnfinished(
+                    conn,
+                    userID,
+                    query,
+                );
                 return result;
             } catch (error) {
                 throw error;
@@ -306,11 +310,15 @@ class RemindService {
             throw error;
         }
     }
-    async getFinished(userID: number) {
+    async getFinished(userID: number, query: any) {
         try {
             const { conn } = await getConnection();
             try {
-                const result = await remindModel.getFinished(conn, userID);
+                const result = await remindModel.getFinished(
+                    conn,
+                    userID,
+                    query,
+                );
                 return result;
             } catch (error) {
                 throw error;

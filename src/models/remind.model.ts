@@ -1041,25 +1041,33 @@ class RemindModel extends DatabaseModel {
 
         return result[0];
     }
-    async getUnfinished(con: PoolConnection, userID: number) {
-        const result = await this.count(
-            con,
-            tables.tableRemind,
-            '*',
-            'is_received = 0 AND user_id = ?',
-            [userID as never],
-        );
-        return result;
+
+    private async getRemindsByFinishStatus(
+        con: PoolConnection,
+        userID: number,
+        data: any,
+        isReceived: number,
+    ) {
+        const { startTime, endTime } = data;
+        let whereClause = `user_id = ? AND is_received = ?`;
+        let params: any[] = [userID, isReceived];
+        if (startTime && endTime) {
+            whereClause += ` AND expiration_time >= ? AND expiration_time <= ?`;
+            params.push(startTime, endTime);
+        }
+        const [results, count] = await Promise.all([
+            this.select(con, tables.tableRemind, '*', whereClause, params),
+            this.count(con, tables.tableRemind, '*', whereClause, params),
+        ]);
+        return { data: results, totalRecord: Number(count) };
     }
-    async getFinished(con: PoolConnection, userID: number) {
-        const result = await this.count(
-            con,
-            tables.tableRemind,
-            '*',
-            'is_received = 1 AND user_id = ?',
-            [userID as never],
-        );
-        return result;
+
+    async getUnfinished(con: PoolConnection, userID: number, data: any) {
+        return this.getRemindsByFinishStatus(con, userID, data, 0);
+    }
+
+    async getFinished(con: PoolConnection, userID: number, data: any) {
+        return this.getRemindsByFinishStatus(con, userID, data, 1);
     }
 }
 

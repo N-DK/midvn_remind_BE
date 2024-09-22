@@ -260,9 +260,9 @@ class DatabaseModel {
     async count(
         db: PoolConnection,
         tableName: string,
-        field = '*',
-        where = '',
-        conditions = [],
+        field: string = '*',
+        where: string = '',
+        conditions: any[] = [],
     ) {
         return await new Promise((resolve, reject) => {
             const query = `SELECT COUNT(${field}) as total FROM ${tableName} WHERE ${where}`;
