@@ -267,7 +267,6 @@ class DatabaseModel {
         return await new Promise((resolve, reject) => {
             const query = `SELECT COUNT(${field}) as total FROM ${tableName} WHERE ${where}`;
             db.query(query, conditions, (err, dataRes) => {
-                console.log(query);
                 if (err) {
                     console.log(err);
                     return reject({ msg: constants.ERROR });

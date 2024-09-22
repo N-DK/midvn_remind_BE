@@ -31,7 +31,8 @@ class RemindModel extends DatabaseModel {
         ${tables.tableRemind}.expiration_time AS expiration_time,
         ${tables.tableRemind}.is_notified AS is_notified,
         ${tables.tableRemind}.is_received AS is_received,
-        ${tables.tableRemind}.cycle AS cycle
+        ${tables.tableRemind}.cycle AS cycle,
+        ${tables.tableRemind}.km_before AS km_before
     `;
 
     public remindCategoryColumns = `
@@ -1040,24 +1041,24 @@ class RemindModel extends DatabaseModel {
 
         return result[0];
     }
-    async getUnfinished(con: PoolConnection, userID: number){
+    async getUnfinished(con: PoolConnection, userID: number) {
         const result = await this.count(
             con,
             tables.tableRemind,
             '*',
-            'is_received = 0 AND user_id =?',
-            [userID as never]
-        )
+            'is_received = 0 AND user_id = ?',
+            [userID as never],
+        );
         return result;
     }
-    async getFinished(con: PoolConnection, userID: number){
+    async getFinished(con: PoolConnection, userID: number) {
         const result = await this.count(
             con,
             tables.tableRemind,
             '*',
-            'is_received = AND user_id =?',
-            [userID as never]
-        )
+            'is_received = 1 AND user_id = ?',
+            [userID as never],
+        );
         return result;
     }
 }
