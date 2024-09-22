@@ -227,7 +227,24 @@ class RemindController {
             GET(res, data);
         },
     )
-
+    getUnfinishedByMonth = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const data = await remindService.getUnfinishedByMonth(
+                req.body.user.userId,
+                req.body
+            );
+            GET(res, data);
+        },
+    )
+    getFinishedByMonth = catchAsync(
+        async (req: Request, res: Response, next: NextFunction) => {
+            const data = await remindService.getFinishedByMonth(
+                req.body.user.userId,
+                req.body
+            );
+            GET(res, data);
+        },
+    )
 }
 
 export default new RemindController();

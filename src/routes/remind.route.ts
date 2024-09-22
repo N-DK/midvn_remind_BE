@@ -116,6 +116,18 @@ router.get('/get/unfinished', verifyToken, remindController.getUnfinished);
 
 router.get('/get/finished', verifyToken, remindController.getFinished);
 
+router.get(
+    '/get/unfinished-by-month',
+    verifyToken,
+    remindController.getUnfinishedByMonth,
+)
+
+router.get(
+    '/get/finished-by-month',
+    verifyToken,
+    remindController.getFinishedByMonth,
+)
+
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);
 };

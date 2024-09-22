@@ -321,6 +321,44 @@ class RemindService {
             throw error;
         }
     }
+    async getUnfinishedByMonth(userID: number, data:any) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindModel.getUnfinishedByMonth(
+                    conn,
+                    userID,
+                    data,
+                );
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+    async getFinishedByMonth(userID: number, data:any) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindModel.getFinishedByMonth(
+                    conn,
+                    userID,
+                    data,
+                );
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindService();

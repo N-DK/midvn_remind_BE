@@ -1040,25 +1040,65 @@ class RemindModel extends DatabaseModel {
 
         return result[0];
     }
-    async getUnfinished(con: PoolConnection, userID: number){
+    async getUnfinished(con: PoolConnection, userID: number) {
         const result = await this.count(
             con,
             tables.tableRemind,
             '*',
             'is_received = 0 AND user_id =?',
-            [userID as never]
-        )
+            [userID as never],
+        );
         return result;
     }
-    async getFinished(con: PoolConnection, userID: number){
+    async getFinished(con: PoolConnection, userID: number) {
         const result = await this.count(
             con,
             tables.tableRemind,
             '*',
             'is_received = AND user_id =?',
-            [userID as never]
-        )
+            [userID as never],
+        );
         return result;
+    }
+    async getUnfinishedByMonth(con: PoolConnection, userID: number, data: any) {
+        const { startTime, endTime } = data;
+        const [dataRes, count] = await Promise.all([
+            this.select(
+                con,
+                tables.tableRemind,
+                '*',
+                `expiration_time >= ${startTime} AND expiration_time <= ${endTime} AND user_id = ? AND is_received = 0`,
+                userID as any
+            ),
+            this.count(
+                con,
+                tables.tableRemind,
+                '*',
+                `expiration_time >= ${startTime} AND expiration_time <= ${endTime} AND user_id = ? AND is_received = 0`,
+                [userID as never],
+            ),
+        ]);
+        return { data: dataRes, count };
+    }
+    async getFinishedByMonth(con: PoolConnection, userID: number, data: any) {
+        const { startTime, endTime } = data;
+        const [dataRes, count] = await Promise.all([
+            this.select(
+                con,
+                tables.tableRemind,
+                '*',
+                `expiration_time >= ${startTime} AND expiration_time <= ${endTime} AND user_id = ? AND is_received = 1`,
+                userID as any
+            ),
+            this.count(
+                con,
+                tables.tableRemind,
+                '*',
+                `expiration_time >= ${startTime} AND expiration_time <= ${endTime} AND user_id = ? AND is_received = 1`,
+                [userID as never],
+            ),
+        ]);
+        return { data: dataRes, count };
     }
 }
 
