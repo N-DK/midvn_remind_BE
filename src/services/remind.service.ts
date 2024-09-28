@@ -329,6 +329,41 @@ class RemindService {
             throw error;
         }
     }
+
+    async getVehicleByRemindId(remindID: number) {
+        try {
+            try {
+                const result = await remindModel.getVehiclesByRemindId(
+                    remindID,
+                );
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async updateImage(remindID: number, data: any) {
+        try {
+            const { conn } = await getConnection();
+            try {
+                const result = await remindModel.updateImage(
+                    conn,
+                    remindID,
+                    data,
+                );
+                return result;
+            } catch (error) {
+                throw error;
+            } finally {
+                conn.release();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 export default new RemindService();

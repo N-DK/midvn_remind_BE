@@ -79,7 +79,7 @@ router.put(
 );
 
 router.put(
-    '/update-is-deleted/:id',
+    '/delete/:id',
     [param('id', constants.VALIDATE_DATA).isNumeric()],
     verifyToken,
     remindController.updateIsDeleted,
@@ -115,6 +115,12 @@ router.post(
 router.get('/get/unfinished', verifyToken, remindController.getUnfinished);
 
 router.get('/get/finished', verifyToken, remindController.getFinished);
+
+router.get(
+    '/get/vehicle/:id',
+    verifyToken,
+    remindController.getVehicleByRemindId,
+);
 
 export default (app: Express) => {
     app.use('/api/v1/remind/main', router);

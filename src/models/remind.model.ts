@@ -8,6 +8,7 @@ import reminder from '../utils/reminder.util';
 import GPSApi from '../api/GPS.api';
 import configureEnvironment from '../config/dotenv.config';
 import remindService from '../services/remind.service';
+import { log } from 'winston';
 
 const { SV_NOTIFY } = configureEnvironment();
 const UNIT_MONTH = 30 * 24 * 60 * 60;
@@ -32,13 +33,15 @@ class RemindModel extends DatabaseModel {
         ${tables.tableRemind}.is_notified AS is_notified,
         ${tables.tableRemind}.is_received AS is_received,
         ${tables.tableRemind}.cycle AS cycle,
-        ${tables.tableRemind}.km_before AS km_before
+        ${tables.tableRemind}.km_before AS km_before,
+        ${tables.tableRemind}.thumbnail_urls AS thumbnail_urls
     `;
 
     public remindCategoryColumns = `
         ${tables.tableRemindCategory}.id AS remind_category_id,
         ${tables.tableRemindCategory}.name AS category_name,
-        ${tables.tableRemindCategory}.icon AS icon
+        ${tables.tableRemindCategory}.icon AS icon,
+        ${tables.tableRemindCategory}.category_parent AS category_parent
     `;
 
     public tireColumns = `
@@ -46,25 +49,6 @@ class RemindModel extends DatabaseModel {
     `;
 
     async getAll(con: PoolConnection, userID: number) {
-        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
-        // if (isRedisReady) {
-        //     const { data } = await redisModel.hGetAll(
-        //         'remind',
-        //         'remind.model.ts',
-        //         Date.now(),
-        //     );
-
-        //     // filter reminds by user_id and is_deleted = 0
-        //     const reminds: any = Object.values(data)
-        //         .filter(
-        //             (remind: any) =>
-        //                 JSON.parse(remind).user_id === userID &&
-        //                 JSON.parse(remind).is_deleted === 0,
-        //         )
-        //         .map((item: any) => JSON.parse(item));
-        //     return reminds;
-        // }
-
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
@@ -88,6 +72,7 @@ class RemindModel extends DatabaseModel {
                  ${tables.tableRemind}.is_received AS is_received,
                  ${tables.tableRemind}.create_time AS remind_create_time,
                  ${tables.tableRemind}.update_time AS remind_update_time,
+                 ${tables.tableRemind}.thumbnail_urls AS thumbnail_urls,
                  
                  ${tables.tableRemindCategory}.id AS remind_category_id,
                  ${tables.tableRemindCategory}.name AS category_name,
@@ -131,24 +116,6 @@ class RemindModel extends DatabaseModel {
     }
 
     async getByVehicleId(con: PoolConnection, vehicleID: string) {
-        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
-        // if (isRedisReady) {
-        //     const { data } = await redisModel.hGetAll(
-        //         'remind',
-        //         'remind.model.ts',
-        //         Date.now(),
-        //     );
-        //     const reminds: any = Object.values(data)
-        //         .filter((remind: any) => {
-        //             remind = JSON.parse(remind);
-        //             return (
-        //                 remind.vehicles.includes(vehicleID) &&
-        //                 remind.is_deleted === 0
-        //             );
-        //         })
-        //         .map((item: any) => JSON.parse(item));
-        //     return reminds;
-        // }
         const result = await this.selectWithJoins(
             con,
             tables.tableVehicleNoGPS,
@@ -172,6 +139,7 @@ class RemindModel extends DatabaseModel {
                    ${tables.tableRemind}.is_received AS is_received,
                    ${tables.tableRemind}.create_time AS remind_create_time,
                    ${tables.tableRemind}.update_time AS remind_update_time,
+                   ${tables.tableRemind}.thumbnail_urls AS thumbnail_urls,
                    
                    ${tables.tableRemindCategory}.id AS remind_category_id,
                    ${tables.tableRemindCategory}.name AS category_name,
@@ -179,6 +147,7 @@ class RemindModel extends DatabaseModel {
                    ${tables.tableRemindCategory}.icon AS category_icon,
                    ${tables.tableRemindCategory}.create_time AS category_create_time,
                    ${tables.tableRemindCategory}.update_time AS category_update_time,
+                   ${tables.tableRemindCategory}.category_parent AS category_parent,
                    ${tables.tableRemindCategory}.is_deleted AS category_is_deleted,
                    ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
                    ${tables.tableTire}.id AS tire,
@@ -256,7 +225,9 @@ class RemindModel extends DatabaseModel {
             query.vehicle_id
                 ? `AND ${tables.tableVehicleNoGPS}.license_plate = '${query.vehicle_id}'`
                 : ''
-        } AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND 
+        } AND ${tables.tableVehicleNoGPS}.is_deleted = 0 AND ${
+            tables.tableRemind
+        }.is_deleted = 0 AND 
               (         note_repair LIKE '%${query.keyword}%' OR
                   cumulative_kilometers LIKE '%${query.keyword}%' OR
                   ${tables.tableRemindCategory}.name LIKE '%${
@@ -290,6 +261,7 @@ class RemindModel extends DatabaseModel {
                  ${tables.tableRemind}.is_received AS is_received,
                  ${tables.tableRemind}.create_time AS remind_create_time,
                  ${tables.tableRemind}.update_time AS remind_update_time,
+                 ${tables.tableRemind}.thumbnail_urls AS thumbnail_urls,
                  
                  ${tables.tableRemindCategory}.id AS remind_category_id,
                  ${tables.tableRemindCategory}.name AS category_name,
@@ -298,6 +270,9 @@ class RemindModel extends DatabaseModel {
                  ${tables.tableRemindCategory}.create_time AS category_create_time,
                  ${tables.tableRemindCategory}.update_time AS category_update_time,
                  ${tables.tableRemindCategory}.is_deleted AS category_is_deleted,
+                 ${tables.tableRemindCategory}.category_parent AS category_parent,
+
+
                  ${tables.tableRemindVehicle}.tire_seri AS tire_seri,
                  ${tables.tableTire}.id AS tire,
                  ${tables.tableVehicleNoGPS}.user_name AS user_name,
@@ -348,6 +323,13 @@ class RemindModel extends DatabaseModel {
     async addRemindGPS(con: PoolConnection, data: any) {
         const res = await GPSApi.getGPSData(data?.token);
         const __data = res?.data;
+
+        if (!data.cumulative_kilometers) {
+            const remind = await this.addRemind(con, data);
+            return { id: remind };
+        }
+
+        const results = [];
         for (const vehicleId of data?.vehicles) {
             const current_kilometers = __data?.[vehicleId]?.total_distance ?? 0;
             const vehicles = [vehicleId];
@@ -357,21 +339,14 @@ class RemindModel extends DatabaseModel {
                 vehicles,
             };
 
-            this.addRemind(con, payload);
+            const remind_id = await this.addRemind(con, payload);
+            results.push({ id: remind_id, vehicle: vehicleId });
         }
 
-        return { message: 'success' };
+        return results;
     }
 
     async addRemind(con: PoolConnection, data: any) {
-        // if (data?.token) {
-        //     const currentKilometers =
-        //         await this.getCurrentKilometersByVehicleId(
-        //             data?.vehicles?.[0],
-        //             data?.token,
-        //         );
-        //     data.current_kilometers = currentKilometers;
-        // }
         try {
             const payload = {
                 img_url: data?.img_url ?? null,
@@ -429,7 +404,7 @@ class RemindModel extends DatabaseModel {
 
             await this.insertRemindSchedule(con, remind_id, data);
 
-            return result;
+            return remind_id;
         } catch (error) {
             console.error('Error adding remind:', error);
             throw error;
@@ -482,7 +457,7 @@ class RemindModel extends DatabaseModel {
 
     async scheduleCronJobForExpiration(remind: any) {
         const cronJob = await scheduleUtils.createCronJobForExpired(
-            new Date(remind.expiration_time + 86400000),
+            new Date(remind.expiration_time + 86400000), // + 86400000
             remind,
         );
         cronJob.start();
@@ -642,180 +617,154 @@ class RemindModel extends DatabaseModel {
     }
 
     async updateRemind(con: PoolConnection, data: any, remindID: number) {
-        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
+        try {
+            const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
-        if (data?.token) {
-            const currentKilometers =
-                await this.getCurrentKilometersByVehicleId(
-                    data?.vehicles?.[0],
-                    data?.token,
+            if (data?.token) {
+                const currentKilometers =
+                    await this.getCurrentKilometersByVehicleId(
+                        data?.vehicles?.[0],
+                        data?.token,
+                    );
+                data.current_kilometers = currentKilometers;
+            }
+
+            const result: any = await this.select(
+                con,
+                tables.tableRemind,
+                '*',
+                'id = ?',
+                [remindID],
+            );
+
+            const remindOld = result[0];
+
+            const payload = {
+                img_url: data?.img_url,
+                note_repair: data?.note_repair ?? remindOld.note_repair,
+                history_repair:
+                    data?.history_repair ?? remindOld.history_repair,
+                current_kilometers:
+                    data?.current_kilometers ?? remindOld.current_kilometers,
+                cumulative_kilometers:
+                    data?.cumulative_kilometers ??
+                    remindOld.cumulative_kilometers,
+                expiration_time:
+                    data?.expiration_time ?? remindOld.expiration_time,
+                is_deleted: remindOld.is_deleted,
+                km_before: data?.km_before ?? remindOld.km_before,
+                is_notified: data?.is_notified ?? remindOld.is_notified,
+                is_received: data?.is_received ?? remindOld.is_received,
+                remind_category_id:
+                    data?.remind_category_id ?? remindOld.remind_category_id,
+                cycle: data?.cycle ?? remindOld.cycle,
+                update_time: Date.now(),
+                user_id:
+                    data?.user?.level === 10
+                        ? data?.user?.userId
+                        : data?.user?.parentId ?? remindOld.user_id,
+            };
+
+            const remind = {
+                ...payload,
+                schedules: data?.schedules ?? [],
+                id: remindID,
+                vehicles: data?.vehicles ?? [],
+            };
+
+            const vehicles = await scheduleUtils.getVehiclesByRemindId(
+                remindID,
+            );
+
+            // nếu cập nhập nhắc có hơn 1 xe
+            if (vehicles.length >= 2) {
+                const vehicleId = data?.vehicles[0];
+
+                // thêm 1 xe mới
+                const remind_id: any = await this.insert(
+                    con,
+                    tables.tableRemind,
+                    payload,
                 );
-            data.current_kilometers = currentKilometers;
-        }
 
-        const result: any = await this.select(
-            con,
-            tables.tableRemind,
-            '*',
-            'id = ?',
-            [remindID],
-        );
+                // thêm 1 lịch trình
+                if (Number(payload.is_notified) === 0 && data?.schedules) {
+                    for (const schedule of data?.schedules) {
+                        await this.handleSchedule(
+                            schedule,
+                            remind,
+                            data?.vehicles,
+                        );
+                    }
+                }
 
-        const remindOld = result[0];
+                // thêm 1 lịch trình
+                await this.insertRemindSchedule(con, remind_id, data);
 
-        const payload = {
-            img_url: data?.img_url,
-            note_repair: data?.note_repair ?? remindOld.note_repair,
-            history_repair: data?.history_repair ?? remindOld.history_repair,
-            current_kilometers:
-                data?.current_kilometers ?? remindOld.current_kilometers,
-            cumulative_kilometers:
-                data?.cumulative_kilometers ?? remindOld.cumulative_kilometers,
-            expiration_time: data?.expiration_time ?? remindOld.expiration_time,
-            is_deleted: remindOld.is_deleted,
-            km_before: data?.km_before ?? remindOld.km_before,
-            is_notified: data?.is_notified ?? remindOld.is_notified,
-            is_received: data?.is_received ?? remindOld.is_received,
-            remind_category_id:
-                data?.remind_category_id ?? remindOld.remind_category_id,
-            cycle: data?.cycle ?? remindOld.cycle,
-            update_time: Date.now(),
-            user_id:
-                data?.user?.level === 10
-                    ? data?.user?.userId
-                    : data?.user?.parentId ?? remindOld.user_id,
-        };
+                // update tbl_remind_vehicle
+                const result: any = await this.select(
+                    con,
+                    tables.tableRemindVehicle,
+                    '*',
+                    'remind_id = ? AND vehicle_id = ?',
+                    [remindID, vehicleId],
+                );
 
-        const remind = {
-            ...payload,
-            schedules: data?.schedules ?? [],
-            id: remindID,
-            vehicles: data?.vehicles ?? [],
-        };
+                // console.log('result', result[0].id);
 
-        const vehicles = await scheduleUtils.getVehiclesByRemindId(remindID);
+                const remindVehicle = await this.update(
+                    con,
+                    tables.tableRemindVehicle,
+                    { remind_id: remind_id },
+                    'id',
+                    result[0].id,
+                );
 
-        // nếu cập nhập nhắc có hơn 1 xe
-        if (vehicles.length >= 2) {
-            const vehicleId = data?.vehicles[0];
+                console.log('remindVehicle', remindVehicle);
 
-            // thêm 1 xe mới
-            const remind_id: any = await this.insert(
+                // xóa phần tử theo data?.vehicles[0]
+                vehicles.splice(vehicleId, 1);
+
+                return { id: remind_id };
+            }
+
+            const results: any = await this.update(
                 con,
                 tables.tableRemind,
                 payload,
+                'id',
+                remindID,
             );
 
-            // thêm 1 lịch trình
-            if (Number(payload.is_notified) === 0 && data?.schedules) {
+            await this.update(
+                con,
+                tables.tableRemindVehicle,
+                { tire_seri: data?.tire_seri },
+                'remind_id',
+                remindID,
+            );
+
+            if (data?.schedules && Number(payload.is_notified) === 0) {
+                const result = await this.delete(
+                    con,
+                    tables.tableRemindSchedule,
+                    `remind_id = ${remindID}`,
+                );
+
+                await this.insertRemindSchedule(con, remindID, data);
+
+                scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
                 for (const schedule of data?.schedules) {
-                    await this.handleSchedule(schedule, remind, data?.vehicles);
+                    await this.handleSchedule(schedule, remind, vehicles);
                 }
             }
 
-            // thêm 1 lịch trình
-            await this.insertRemindSchedule(con, remind_id, data);
-
-            // update tbl_remind_vehicle
-            const result: any = await this.select(
-                con,
-                tables.tableRemindVehicle,
-                '*',
-                'remind_id = ? AND vehicle_id = ?',
-                [remindID, vehicleId],
-            );
-
-            console.log('result', result[0].id);
-
-            const remindVehicle = await this.update(
-                con,
-                tables.tableRemindVehicle,
-                { remind_id: remind_id },
-                'id',
-                result[0].id,
-            );
-
-            console.log('remindVehicle', remindVehicle);
-
-            // xóa phần tử theo data?.vehicles[0]
-            vehicles.splice(vehicleId, 1);
-
-            return { message: 'Update success' };
-        }
-
-        const results: any = await this.update(
-            con,
-            tables.tableRemind,
-            payload,
-            'id',
-            remindID,
-        );
-
-        await this.update(
-            con,
-            tables.tableRemindVehicle,
-            { tire_seri: data?.tire_seri },
-            'remind_id',
-            remindID,
-        );
-
-        if (data?.schedules && Number(payload.is_notified) === 0) {
-            const result = await this.delete(
-                con,
-                tables.tableRemindSchedule,
-                `remind_id = ${remindID}`,
-            );
-
-            await this.insertRemindSchedule(con, remindID, data);
-
-            scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
-            for (const schedule of data?.schedules) {
-                await this.handleSchedule(schedule, remind, vehicles);
+            if (data?.expiration_time && payload.is_notified === 0) {
+                scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
+                await this.scheduleCronJobForExpiration(remind);
             }
-        }
 
-        if (data?.expiration_time && payload.is_notified === 0) {
-            scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
-            await this.scheduleCronJobForExpiration(remind);
-        }
-
-        if (isRedisReady) {
-            await redisModel.hSet(
-                'remind',
-                remindID,
-                JSON.stringify(remind),
-                'remind.models.ts',
-                Date.now(),
-            );
-        }
-
-        return results;
-    }
-
-    async updateIsDeleted(con: PoolConnection, remindID: number) {
-        const result = await this.update(
-            con,
-            tables.tableRemind,
-            { is_deleted: 1 },
-            'id',
-            remindID,
-        );
-        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
-
-        const { data } = await redisModel.hGetAll(
-            'remind',
-            'remind.model.ts',
-            Date.now(),
-        );
-        const reminds: any = isRedisReady ? Object.values(data) : result;
-        if (isRedisReady) {
-            const remindIndex = reminds.findIndex(
-                (remind: any) => remind.id === remindID,
-            );
-
-            if (remindIndex !== -1) {
-                let remind = JSON.parse(reminds[remindIndex]);
-                remind.is_deleted = 1;
+            if (isRedisReady) {
                 await redisModel.hSet(
                     'remind',
                     remindID,
@@ -823,10 +772,52 @@ class RemindModel extends DatabaseModel {
                     'remind.models.ts',
                     Date.now(),
                 );
-            } else {
-                console.log(`Remind with ID ${remindID} not found in Redis`);
             }
+
+            return results;
+        } catch (error) {
+            console.log('Error update remind:', error);
         }
+    }
+
+    async updateIsDeleted(con: PoolConnection, remindID: number) {
+        const result = await this.update(
+            con,
+            tables.tableRemind,
+            { is_deleted: 1, is_notified: 1 },
+            'id',
+            remindID,
+        );
+
+        scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
+        scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
+
+        // const { data } = await redisModel.hGetAll(
+        //     'remind',
+        //     'remind.model.ts',
+        //     Date.now(),
+        // );
+        // const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
+        // const reminds: any = isRedisReady ? Object.values(data) : result;
+        // if (isRedisReady) {
+        //     const remindIndex = reminds.findIndex(
+        //         (remind: any) => remind.id === remindID,
+        //     );
+
+        //     if (remindIndex !== -1) {
+        //         let remind = JSON.parse(reminds[remindIndex]);
+        //         remind.is_deleted = 1;
+        //         await redisModel.hSet(
+        //             'remind',
+        //             remindID,
+        //             JSON.stringify(remind),
+        //             'remind.models.ts',
+        //             Date.now(),
+        //         );
+        //     } else {
+        //         console.log(`Remind with ID ${remindID} not found in Redis`);
+        //     }
+        // }
         return result;
     }
 
@@ -881,12 +872,18 @@ class RemindModel extends DatabaseModel {
                 tire_seri: data?.tire_seri,
                 create_time: Date.now(),
             };
-            await remindService.update({ is_received: 1 }, remindID);
-            await remindService.addRemind(payload);
+            await this.update(
+                con,
+                tables.tableRemind,
+                { is_received: 1 },
+                'id',
+                remindID,
+            );
+            const remind_id = await remindService.addRemind(payload);
             scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
             scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
 
-            return payload;
+            return { id: remind_id, img_url: remindOld.img_url, vehicles };
         } catch (error) {
             console.log('Error finish remind:', error);
         }
@@ -992,24 +989,28 @@ class RemindModel extends DatabaseModel {
         const reminds = await reminder.getReminds(true);
 
         Object.keys(reminds).forEach((key) => {
-            reminds[key] = reminds[key].map((remind: any) => remind.id);
+            reminds[key] = reminds[key]
+                .filter((item: any) => {
+                    return item.category_parent == data.category_parent;
+                })
+                .map((remind: any) => remind.id);
         });
 
-        for (const vechile of data?.vehicles) {
-            if (reminds?.[vechile]) {
+        for (const vehicle of data?.vehicles) {
+            if (reminds?.[vehicle] && reminds[vehicle].length > 0) {
                 const result = await this.update(
                     con,
                     tables.tableRemind,
                     { is_deleted: 1, is_notified: 1 },
                     'id',
-                    reminds[vechile],
+                    reminds[vehicle],
                 );
                 scheduleUtils.destroyAllCronJobByRemindId(
-                    reminds[vechile],
+                    reminds[vehicle],
                     'schedule',
                 );
                 scheduleUtils.destroyAllCronJobByRemindId(
-                    reminds[vechile],
+                    reminds[vehicle],
                     'expire',
                 );
             }
@@ -1049,7 +1050,7 @@ class RemindModel extends DatabaseModel {
         isReceived: number,
     ) {
         const { startTime, endTime } = data;
-        let whereClause = `user_id = ? AND is_received = ?`;
+        let whereClause = `user_id = ? AND is_received = ? AND is_deleted = 0`;
         let params: any[] = [userID, isReceived];
 
         if (Number(startTime) && Number(endTime)) {
@@ -1070,6 +1071,14 @@ class RemindModel extends DatabaseModel {
 
     async getFinished(con: PoolConnection, userID: number, data: any) {
         return this.getRemindsByFinishStatus(con, userID, data, 1);
+    }
+
+    async getVehiclesByRemindId(remindId: number) {
+        return await scheduleUtils.getVehiclesByRemindId(remindId);
+    }
+
+    async updateImage(con: PoolConnection, remindId: number, data: any) {
+        return await this.update(con, tables.tableRemind, data, 'id', remindId);
     }
 }
 

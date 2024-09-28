@@ -33,6 +33,7 @@ class RemindCategoryModel extends DatabaseModel {
             name: data.name,
             desc: data.desc,
             icon: data.icon.trim() === '' ? '➕' : data.icon,
+            category_parent: data?.category_parent,
             user_id: userID,
             create_time: Date.now(),
         });

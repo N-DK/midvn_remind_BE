@@ -7,6 +7,7 @@ import { getConnection } from '../dbs/init.mysql';
 import { tables } from '../constants/tableName.constant';
 import configureEnvironment from '../config/dotenv.config';
 import remindService from '../services/remind.service';
+import reminder from './reminder.util';
 
 const { SV_NOTIFY } = configureEnvironment();
 let reminds: any[] = [];
@@ -63,7 +64,7 @@ class ScheduleUtils {
         const month = expirationTime.getMonth() + 1;
         const day = expirationTime.getDate();
         const { remind_id, id, ...other } = remind;
-        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
+        // const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
         // console.log('other', other);
         // console.log('schedule', remind.schedules);
@@ -74,20 +75,46 @@ class ScheduleUtils {
             `*/20 8-20 ${day} ${month} *`, // */20 8-20
             async () => {
                 try {
-                    await remindService.addRemind({
-                        ...other,
-                        user: { userId: remind.user_id },
-                        expiration_time:
-                            (Math.ceil(Date.now() / 1000) +
-                                remind.cycle * this.UNIT_MONTH) *
-                            1000,
-                        schedules: remind.schedules.map((s: any) => ({
-                            ...s,
-                            start:
-                                s.start + remind.cycle * this.UNIT_MONTH * 1000,
-                            end: s.end + remind.cycle * this.UNIT_MONTH * 1000,
-                        })),
-                    });
+                    const result = await remindService.finishRemind(
+                        remind.id,
+                        remind.user_id,
+                        {
+                            ...other,
+                            user: { userId: remind.user_id },
+                            expiration_time:
+                                (Math.ceil(Date.now() / 1000) +
+                                    remind.cycle * this.UNIT_MONTH) *
+                                1000,
+                            schedules: remind.schedules.map((s: any) => ({
+                                ...s,
+                                start:
+                                    s.start +
+                                    remind.cycle * this.UNIT_MONTH * 1000,
+                                end:
+                                    s.end +
+                                    remind.cycle * this.UNIT_MONTH * 1000,
+                            })),
+                        },
+                    );
+
+                    await reminder.clearUploadsThumbnailByRemind(id);
+
+                    const img_urls: string[] = [];
+                    for (const img_url of result?.img_url?.split(', ')) {
+                        const index = img_urls.findIndex((item) =>
+                            item.includes(img_url.split('/')[2]),
+                        );
+                        if (index < 0) {
+                            img_urls.push(img_url);
+                        }
+                    }
+
+                    await reminder.moveToUploads(
+                        result?.vehicles,
+                        img_urls.join(', '),
+                        result?.id,
+                    );
+
                     await remindFeature.sendNotifyRemind(SV_NOTIFY as string, {
                         name_remind:
                             'Hạn bảo dưỡng ' + remind?.note_repair + ' ',
@@ -102,20 +129,19 @@ class ScheduleUtils {
                 } finally {
                     // cronJob.stop();
                     // console.log('cronJobs before', cronJobs.size);
-                    this.destroyAllCronJobByRemindId(remind.id, 'schedule');
-                    this.destroyAllCronJobByRemindId(remind.id, 'expire');
+                    // this.destroyAllCronJobByRemindId(remind.id, 'schedule');
+                    // this.destroyAllCronJobByRemindId(remind.id, 'expire');
                     // console.log('cronJobs after', cronJobs.size);
-
-                    if (isRedisReady) {
-                        const result = await redisModel.hDel(
-                            'remind',
-                            remind.id.toString(),
-                            'schedule.utils.ts',
-                            Date.now(),
-                        );
-                    } else {
-                        await remindService.updateNotifiedOff(remind.id);
-                    }
+                    // if (isRedisReady) {
+                    //     const result = await redisModel.hDel(
+                    //         'remind',
+                    //         remind.id.toString(),
+                    //         'schedule.utils.ts',
+                    //         Date.now(),
+                    //     );
+                    // } else {
+                    //     await remindService.updateIsDeleted(remind.id);
+                    // }
                 }
             },
             { name: `${id}-${expirationTime}-expire` },

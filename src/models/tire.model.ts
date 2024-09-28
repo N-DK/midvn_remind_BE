@@ -72,7 +72,7 @@ class TireModel extends DatabaseModel {
             conn,
             tables.tableTire,
             '*',
-            `license_plate = '${data.vehicleID}' AND (seri LIKE '%${data.keyword}%' OR brand LIKE '%${data.keyword}%')`,
+            `license_plate = '${data.vehicleID}' AND is_deleted = 0 AND (seri LIKE '%${data.keyword}%' OR brand LIKE '%${data.keyword}%' OR size LIKE '%${data.keyword}%')`,
         );
         return result;
     }

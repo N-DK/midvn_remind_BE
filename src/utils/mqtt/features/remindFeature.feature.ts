@@ -50,7 +50,7 @@ const processRemind = async (data: any, reminds: any[]) => {
                 remind.cumulative_kilometers -
                 remind.km_before;
 
-        if (isOverKm) {
+        if (isOverKm && remind.current_kilometers > 0) {
             await remindNotify.sendNotifyRemind(SV_NOTIFY as string, {
                 name_remind: 'Vượt quá số km bảo dưỡng',
                 vehicle_name: data?.vehicle_name,

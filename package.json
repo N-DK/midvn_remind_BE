@@ -32,6 +32,7 @@
         "nodemon": "^3.1.4",
         "notify-services": "^1.0.3",
         "redis": "^4.7.0",
+        "sharp": "^0.33.5",
         "swagger-jsdoc": "^6.2.8",
         "swagger-ui-express": "^5.0.1",
         "ts-node": "^10.9.2",

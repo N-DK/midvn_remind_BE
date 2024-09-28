@@ -12,7 +12,7 @@ class DatabaseModel {
         orderByField = 'id',
         orderBySort = 'DESC',
         offset = 0,
-        limit = 10,
+        limit = 1000,
     ) {
         return await new Promise((resolve, reject) => {
             const query = `SELECT ${fields} FROM ${tableName} WHERE ${where} ORDER BY ${orderByField} ${orderBySort} LIMIT ${offset},${limit}`;
