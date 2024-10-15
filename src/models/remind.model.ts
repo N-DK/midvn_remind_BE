@@ -184,40 +184,40 @@ class RemindModel extends DatabaseModel {
     }
 
     async search(con: PoolConnection, userID: number, query: any) {
-        // const isRedisReady = redisModel.redis.instanceConnect.isReady;
-        // if (isRedisReady) {
-        //     const { data } = await redisModel.hGetAll(
-        //         'remind',
-        //         'remind.model.ts',
-        //         Date.now(),
-        //     );
-        //     const reminds: any = Object.values(data).filter((remind: any) => {
-        //         remind = JSON.parse(remind);
-        //         // filter by user_id, vehicle_id, keyword, is_deleted, is_received, note_repair, cumulative_kilometers
-        //         return (
-        //             remind.user_id === userID &&
-        //             remind.is_deleted === 0 &&
-        //             remind.is_received === 0 &&
-        //             remind.vehicles.includes(query.vehicle_id) &&
-        //             (remind.note_repair
-        //                 .toLowerCase()
-        //                 .includes(query.keyword.toLowerCase()) ||
-        //                 remind.cumulative_kilometers
-        //                     .toLowerCase()
-        //                     .includes(query.keyword.toLowerCase()) ||
-        //                 remind.category_name
-        //                     .toLowerCase()
-        //                     .includes(query.keyword.toLowerCase()) ||
-        //                 remind.license_plate
-        //                     .toLowerCase()
-        //                     .includes(query.keyword.toLowerCase()) ||
-        //                 remind.license
-        //                     .toLowerCase()
-        //                     .includes(query.keyword.toLowerCase()))
-        //         );
-        //     });
-        //     return reminds;
-        // }
+        const isRedisReady = redisModel.redis.instanceConnect.isReady;
+        if (isRedisReady) {
+            const { data } = await redisModel.hGetAll(
+                'remind',
+                'remind.model.ts',
+                Date.now(),
+            );
+            const reminds: any = Object.values(data).filter((remind: any) => {
+                remind = JSON.parse(remind);
+                // filter by user_id, vehicle_id, keyword, is_deleted, is_received, note_repair, cumulative_kilometers
+                return (
+                    remind.user_id === userID &&
+                    remind.is_deleted === 0 &&
+                    remind.is_received === 0 &&
+                    remind.vehicles.includes(query.vehicle_id) &&
+                    (remind.note_repair
+                        .toLowerCase()
+                        .includes(query.keyword.toLowerCase()) ||
+                        remind.cumulative_kilometers
+                            .toLowerCase()
+                            .includes(query.keyword.toLowerCase()) ||
+                        remind.category_name
+                            .toLowerCase()
+                            .includes(query.keyword.toLowerCase()) ||
+                        remind.license_plate
+                            .toLowerCase()
+                            .includes(query.keyword.toLowerCase()) ||
+                        remind.license
+                            .toLowerCase()
+                            .includes(query.keyword.toLowerCase()))
+                );
+            });
+            return reminds;
+        }
 
         let params: any[] = [userID];
         if (query.keyword === null) query.keyword = '';
@@ -792,32 +792,32 @@ class RemindModel extends DatabaseModel {
         scheduleUtils.destroyAllCronJobByRemindId(remindID, 'schedule');
         scheduleUtils.destroyAllCronJobByRemindId(remindID, 'expire');
 
-        // const { data } = await redisModel.hGetAll(
-        //     'remind',
-        //     'remind.model.ts',
-        //     Date.now(),
-        // );
-        // const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
-        // const reminds: any = isRedisReady ? Object.values(data) : result;
-        // if (isRedisReady) {
-        //     const remindIndex = reminds.findIndex(
-        //         (remind: any) => remind.id === remindID,
-        //     );
+        const { data } = await redisModel.hGetAll(
+            'remind',
+            'remind.model.ts',
+            Date.now(),
+        );
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
+        const reminds: any = isRedisReady ? Object.values(data) : result;
+        if (isRedisReady) {
+            const remindIndex = reminds.findIndex(
+                (remind: any) => remind.id === remindID,
+            );
 
-        //     if (remindIndex !== -1) {
-        //         let remind = JSON.parse(reminds[remindIndex]);
-        //         remind.is_deleted = 1;
-        //         await redisModel.hSet(
-        //             'remind',
-        //             remindID,
-        //             JSON.stringify(remind),
-        //             'remind.models.ts',
-        //             Date.now(),
-        //         );
-        //     } else {
-        //         console.log(`Remind with ID ${remindID} not found in Redis`);
-        //     }
-        // }
+            if (remindIndex !== -1) {
+                let remind = JSON.parse(reminds[remindIndex]);
+                remind.is_deleted = 1;
+                await redisModel.hSet(
+                    'remind',
+                    remindID,
+                    JSON.stringify(remind),
+                    'remind.models.ts',
+                    Date.now(),
+                );
+            } else {
+                console.log(`Remind with ID ${remindID} not found in Redis`);
+            }
+        }
         return result;
     }
 

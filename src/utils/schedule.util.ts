@@ -64,7 +64,7 @@ class ScheduleUtils {
         const month = expirationTime.getMonth() + 1;
         const day = expirationTime.getDate();
         const { remind_id, id, ...other } = remind;
-        // const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
+        const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
 
         // console.log('other', other);
         // console.log('schedule', remind.schedules);
@@ -132,14 +132,15 @@ class ScheduleUtils {
                     // this.destroyAllCronJobByRemindId(remind.id, 'schedule');
                     // this.destroyAllCronJobByRemindId(remind.id, 'expire');
                     // console.log('cronJobs after', cronJobs.size);
-                    // if (isRedisReady) {
-                    //     const result = await redisModel.hDel(
-                    //         'remind',
-                    //         remind.id.toString(),
-                    //         'schedule.utils.ts',
-                    //         Date.now(),
-                    //     );
-                    // } else {
+                    if (isRedisReady) {
+                        const result = await redisModel.hDel(
+                            'remind',
+                            remind.id.toString(),
+                            'schedule.utils.ts',
+                            Date.now(),
+                        );
+                    }
+                    // else {
                     //     await remindService.updateIsDeleted(remind.id);
                     // }
                 }

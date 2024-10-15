@@ -5,37 +5,27 @@ import reminder from '../../reminder.util';
 import configureEnvironment from '../../../config/dotenv.config';
 
 const { SV_NOTIFY } = configureEnvironment();
-// const LIMIT = 5000;
-// let count: number = 0;
 const remindFeature = async (client: any, data: any, requestId: any) => {
     const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
-    // if (count > LIMIT) count = 0;
-    // count++;
-    // const isResync = count > LIMIT;
 
     try {
-        // Kiểm tra nếu không có dữ liệu hợp lệ
         if (!data || !Object.keys(data).length) return;
 
         let reminds: any[] = [];
 
         if (isRedisReady) {
-            // Lấy remind từ Redis nếu Redis sẵn sàng
             reminds =
-                (await reminder.groupVehiclesWithObjects(data.imei)) || [];
+                (await reminder.groupVehiclesWithObjects(data?.imei)) || [];
         } else {
-            // Lấy remind từ nguồn khác nếu Redis không sẵn sàng
             const result = await reminder.getReminds(false);
 
             reminds = result?.[data.imei] || [];
         }
 
-        // Nếu có remind, tiến hành xử lý
-        if (reminds.length > 0) {
+        if (reminds?.length > 0) {
             await processRemind(data, reminds);
         }
     } catch (error) {
-        // console.error('Error', error);
         mylogger.error('message', ['nameFeature', requestId, error]);
     }
 };

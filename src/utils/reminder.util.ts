@@ -438,7 +438,7 @@ const reminder = {
     },
 
     // req.files
-    //                 .map((file) =>
+    //     .map((file) =>
     //                     file.path.replace(`src/`, '').replace('build/', ''),
     //                 )
     //                 .join(', ');
@@ -446,7 +446,7 @@ const reminder = {
     convertImage: (files: any) => {
         return files
             .map((file: any) =>
-                file.path.replace(`src\\`, '').replace('build\\', ''),
+                file.path.replace(`src/`, '').replace('build/', ''),
             )
             .join(', ');
     },
