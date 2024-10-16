@@ -31,7 +31,7 @@ const remindFeature = async (client: any, data: any, requestId: any) => {
 };
 
 const processRemind = async (data: any, reminds: any[]) => {
-    console.log(`${data.vehicle_name} - ${reminds.length}`);
+    // console.log(`${data?.vehicle_name} - ${reminds.length}`);
 
     for (const remind of reminds) {
         const isOverKm =

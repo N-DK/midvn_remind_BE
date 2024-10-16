@@ -262,6 +262,10 @@ class ScheduleUtils {
                     '*',
                     'is_notified = 0 AND is_deleted = 0 AND is_received = 0',
                     [],
+                    'id',
+                    'DESC',
+                    0,
+                    999999999,
                 );
 
                 const reminds = await Promise.all(

@@ -1,9 +1,9 @@
 import axios, { AxiosResponse } from 'axios';
 import configureEnvironment from '../config/dotenv.config';
 
-const { SV_REAL_ALARM } = configureEnvironment();
+const { SV_SOCKET } = configureEnvironment();
 const axiosAlarm = axios.create({
-    baseURL: SV_REAL_ALARM,
+    baseURL: SV_SOCKET,
 });
 
 const handleRes = (response: AxiosResponse) => {

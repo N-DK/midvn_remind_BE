@@ -33,7 +33,7 @@ const reminder = {
     init: async () => {
         try {
             const isRedisReady = redisModel?.redis?.instanceConnect?.isReady;
-            let interval: any = null;
+            let interval: NodeJS.Timeout | null = null;
 
             const fetchFromDatabase = async () => {
                 console.time('Fetching data from database...');
@@ -41,10 +41,26 @@ const reminder = {
                 console.timeEnd('Fetching data from database...');
             };
 
-            const checkRedisConnection = async (isResync: boolean) => {
-                if (redisModel?.redis?.instanceConnect?.isReady) {
+            const setIntervalCheckRedis = (
+                delay: number,
+                isResync: boolean,
+            ) => {
+                interval = setInterval(
+                    async () => await checkRedisConnection(isResync),
+                    delay,
+                );
+            };
+
+            const clearExistingInterval = () => {
+                if (interval) {
                     clearInterval(interval);
                     interval = null;
+                }
+            };
+
+            const checkRedisConnection = async (isResync: boolean) => {
+                if (redisModel?.redis?.instanceConnect?.isReady) {
+                    clearExistingInterval();
                     console.log('Redis reconnected and data resynced.');
                     if (isResync) await reminder.resyncReminds();
                 } else {
@@ -52,13 +68,10 @@ const reminder = {
                 }
             };
 
+            // Lần đầu kiểm tra Redis
             if (!isRedisReady) {
                 await fetchFromDatabase();
-
-                interval = setInterval(
-                    async () => await checkRedisConnection(true),
-                    10 * 1000,
-                );
+                setIntervalCheckRedis(10 * 1000, true); // Kiểm tra Redis mỗi 10 giây
             }
 
             redisModel?.redis?.instanceConnect?.on('error', async () => {
@@ -66,16 +79,12 @@ const reminder = {
                     console.log(
                         'Redis connection lost. Switching to database...',
                     );
-                    await fetchFromDatabase();
-
-                    interval = setInterval(
-                        async () => await checkRedisConnection(false),
-                        60 * 1000,
-                    );
+                    // await fetchFromDatabase();
+                    setIntervalCheckRedis(60 * 1000, false); // Kiểm tra lại mỗi 60 giây khi Redis gặp lỗi
                 }
             });
 
-            redisModel?.redis?.instanceConnect?.on('connect', async () => {
+            redisModel?.redis?.instanceConnect?.once('connect', async () => {
                 console.log('Redis connection restored.');
                 await reminder.resyncReminds();
             });
@@ -169,6 +178,7 @@ const reminder = {
                             },
                         ],
                     );
+                    // console.log('results', results.length);
 
                     const groupByVehicleId: any = {};
                     results.forEach((item: any) => {
@@ -178,11 +188,11 @@ const reminder = {
                         }
                         groupByVehicleId[item.vehicle_id].push({ ...other });
                     });
-
                     remindsVehicles = groupByVehicleId;
                     isProcess = remindsVehicles ? false : true;
                     return groupByVehicleId;
                 } catch (error) {
+                    console.log('Error reminder utils: ', error);
                 } finally {
                     isProcess = remindsVehicles ? false : true;
                     conn.release();
