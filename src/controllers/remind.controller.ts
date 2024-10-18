@@ -281,7 +281,9 @@ class RemindController {
     getUnfinished = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             const data = await remindService.getUnfinished(
-                req.body.user.userId,
+                req.body?.user?.level === 10
+                    ? req.body?.user?.userId
+                    : req.body?.user?.parentId,
                 req.query,
             );
             GET(res, data.data, 0, data.totalRecord);
@@ -291,7 +293,9 @@ class RemindController {
     getFinished = catchAsync(
         async (req: Request, res: Response, next: NextFunction) => {
             const data = await remindService.getFinished(
-                req.body.user.userId,
+                req.body?.user?.level === 10
+                    ? req.body?.user?.userId
+                    : req.body?.user?.parentId,
                 req.query,
             );
             GET(res, data.data, 0, data.totalRecord);
